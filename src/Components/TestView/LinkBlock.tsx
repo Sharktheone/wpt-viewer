@@ -10,7 +10,7 @@ export function LinkBlock({ test }: TestBlockAttributes) {
     );
 
     const githubUrl = useComputed(
-        () => `https://github.com/web-platform-tests/wpt/blob/master/${test.value.path}`
+        () => `https://github.com/tc39/test262/tree/main/test/${test.value.path}`
     );
 
     const mdnUrl = useComputed(() => {
