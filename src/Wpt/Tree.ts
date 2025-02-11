@@ -26,6 +26,13 @@ interface FlatCompactEntryTree {
     [key: string]: CompactEntry;
 }
 
+interface Test262Entry {
+    status: ShortStatusType,
+    path: string,
+}
+
+type Test262Results = Test262Entry[]
+
 interface NavigateParams {
     search?: string;
     statuses?: ShortStatusType[];
@@ -69,24 +76,21 @@ export class Tree {
         return Object.fromEntries(ShortStatus.map(k => [k, 0])) as TreeStatusMap;
     }
 
-    static recomputeTestEntry(entry: CompactEntry): CompactEntry {
-        let status = entry.s;
-        const [passedTests, totalTests] = entry.c;
+    static recomputeTestEntry(entry: Test262Entry): CompactEntry {
+        let status = entry.status;
+
+
+        let pass = false;
 
         if (status === 'O') {
-            // PASS if v === max
-            if (passedTests === totalTests) {
-                status = 'P';
-            }
-            // FAIL if v === 0
-            else if (passedTests === 0) {
-                status = 'F';
-            }
+            pass = true;
+        } else if (status === 'P') {
+            pass = true;
         }
 
         return {
             s: status,
-            c: [passedTests, totalTests],
+            c: [pass ? 1 : 0, 1],
         };
     }
 
@@ -128,14 +132,16 @@ export class Tree {
 
     tree: EntryTree;
 
-    constructor(fyi: Fyi, flat: FlatCompactEntryTree) {
+    constructor(fyi: Fyi, flat: Test262Entry) {
         const start = window.performance.now();
 
         // create the tree from the flat map
         const tree = Object.create(null);
         for (let [key, value] of Object.entries(flat)) {
             // remove leading slash
-            key = key.slice(1);
+            // key = key.slice(1);
+
+            let key = value.path;
 
             // some status values are wrong, we need to fix them
             value = Tree.recomputeTestEntry(value);
