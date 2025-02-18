@@ -27,8 +27,8 @@ interface FlatCompactEntryTree {
 }
 
 interface Test262Entry {
-    status: ShortStatusType,
-    path: string,
+    s: ShortStatusType,
+    p: string,
 }
 
 type Test262Results = Test262Entry[]
@@ -77,7 +77,7 @@ export class Tree {
     }
 
     static recomputeTestEntry(entry: Test262Entry): CompactEntry {
-        let status = entry.status;
+        let status = entry.s;
 
 
         let pass = false;
@@ -137,11 +137,11 @@ export class Tree {
 
         // create the tree from the flat map
         const tree = Object.create(null);
-        for (let [key, value] of Object.entries(flat)) {
+        for (let [_, value] of Object.entries(flat)) {
             // remove leading slash
             // key = key.slice(1);
 
-            let key = value.path;
+            let key = value.p;
 
             // some status values are wrong, we need to fix them
             value = Tree.recomputeTestEntry(value);
