@@ -5,6 +5,8 @@ import { Folder } from 'lucide-preact';
 import type { RowAttributes } from './Component';
 import { TestCompletion } from './TestCompletion';
 import { useComputed } from '@preact/signals';
+import {TestNum} from "#/Components/TestList/TestNum.tsx"
+import {settings} from "#/State.tsx"
 
 export function DirectoryRow({ name, object, path }: RowAttributes) {
     const subtree = object as EntryTree;
@@ -30,5 +32,11 @@ export function DirectoryRow({ name, object, path }: RowAttributes) {
         <td>
             <TestCompletion passed={passed} total={total} />
         </td>
+
+        {settings.showTests.peek() &&
+            <td>
+                <TestNum passed={passed} total={total} />
+            </td>
+        }
     </tr>
 }

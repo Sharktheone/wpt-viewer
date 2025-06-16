@@ -1,21 +1,15 @@
 import { effect, signal } from '@preact/signals';
 import { Browsers, type FyiBrowser } from './Wpt/Fyi';
 
-const DefaultBrowser: FyiBrowser = 'ladybird';
-
-function getStoredBrowser() {
-    const browser: string|null = localStorage.getItem('browser');
-    if (!browser || ! Browsers.includes(browser as FyiBrowser)) {
-        return DefaultBrowser;
-    }
-
-    return browser as FyiBrowser;
+function getShowTests() {
+    const showTests = localStorage.getItem('showTests');
+    return showTests === 'true' || showTests === null;
 }
 
 export const settings = {
-    browser: signal<FyiBrowser>(getStoredBrowser()),
+    showTests: signal<boolean>(getShowTests()),
 };
 
 effect(() => {
-    localStorage.setItem('browser', settings.browser.value);
+    localStorage.setItem('showTests', settings.showTests.value.toString());
 });
