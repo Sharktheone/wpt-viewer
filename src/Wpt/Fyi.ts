@@ -44,44 +44,18 @@ export interface FullEntry extends Subtest {
 
 export class Fyi {
     #origin: string;
-    #browser: FyiBrowser;
-    // #run?: Run;
 
-    constructor(browser: FyiBrowser, origin = 'https://wpt.fyi/api') {
+    constructor(origin = "https://raw.githubusercontent.com/Sharktheone/yavashark-data/refs/heads/main") {
         this.#origin = origin;
-        this.#browser = browser;
     }
 
-    async #get(path: string) {
-        // const url = `${this.#origin}/${path}?product=${this.#browser}`;
-        // let data = await fetch(url).then(r => r.json());
-        //
-        // console.log(data)
-        //
-        // return data
-
-
-        return await fetch("https://raw.githubusercontent.com/Sharktheone/yavashark-data/refs/heads/main/results.json").then(r => r.json());
-
+    async #get(_path: string) {
+        return await fetch(`${this.#origin}/results.json`).then(r => r.json());
     }
 
-    // async #getRun(): Promise<Run> {
-    //     if (this.#run) {
-    //         return this.#run;
-    //     }
-    //
-    //     const [response] = await this.#get('runs');
-    //     this.#run = response;
-    //
-    //     return response;
-    // }
-
-    // async #getResultUrlPrefix() {
-    //     return (await this.#getRun()).results_url.replace(/-summary_v2\.json\.gz$/, '');
-    // }
 
     async getTestDetails(path: string): Promise<FullEntry> {
-        let data = await fetch(`https://raw.githubusercontent.com/Sharktheone/yavashark-data/refs/heads/main/results/${path}.json`).then(r => r.json());
+        let data = await fetch(`${this.#origin}/results/${path}.json`).then(r => r.json());
 
         console.log(path)
 
@@ -112,22 +86,10 @@ export class Fyi {
 
 
         } as FullEntry
-
-
-        // const prefix = await this.#getResultUrlPrefix();
-        // const encodedPath = path.replace(/\?.*/, v => encodeURIComponent(v));
-        // const entry = await fetch(`${prefix}/${encodedPath}`).then(r => r.json());
-        //
-        // return {
-        //     ...entry,
-        //     run: await this.#getRun(),
-        // }
     }
 
     async getTree() {
         let tree = new Tree(this, await this.#get('results'));
-
-        // console.log(tree)
 
         return tree
     }

@@ -22,16 +22,10 @@ export interface EntryTree {
     [TreeMetaSubtest]: [number, number];
 }
 
-interface FlatCompactEntryTree {
-    [key: string]: CompactEntry;
-}
-
 interface Test262Entry {
     s: ShortStatusType,
     p: string,
 }
-
-type Test262Results = Test262Entry[]
 
 interface NavigateParams {
     search?: string;

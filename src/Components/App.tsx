@@ -29,15 +29,10 @@ function unwrapSignalStatusMap(map: FilterMap) {
 }
 
 export function App() {
-    const fyi = useComputed(() => new Fyi(settings.browser.value));
+    const fyi = useComputed(() => new Fyi());
     const statusFilters: FilterMap = createSignalStatusMap();
     const search = useSignal('');
     const tree = useSignal<Tree|null>(null);
-
-    useSignalEffect(() => {
-        settings.browser.value;
-        tree.value = null;
-    });
 
     const entryOrEntryTree = useComputed(() =>
         tree.value?.navigate(globalPath.value, {
