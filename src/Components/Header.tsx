@@ -1,9 +1,10 @@
-import '#/Style/components/Header.scss';
+import '#/Style/components/Header.scss'
 
-import { Github, Settings, Undo2 } from 'lucide-preact';
-import { Breadcrumbs } from './Ui/Breadcrumbs';
-import { globalPath, page } from '#/Routing';
-import { useComputed } from '@preact/signals';
+import {Github, Settings, Undo2} from 'lucide-preact'
+import {Breadcrumbs} from './Ui/Breadcrumbs'
+import {globalPath, page} from '#/Routing'
+import {useComputed} from '@preact/signals'
+import {settings} from "#/State.tsx"
 
 export function Header() {
     const backToWptLink = useComputed(() =>
@@ -16,11 +17,34 @@ export function Header() {
         </a>
     );
 
+    const commitoptions = useComputed(() => {
+        const NUM_HEAD_MINUS = 5;
+
+        return Array.from({length: NUM_HEAD_MINUS + 1}, (_, i) => {
+            const value = `HEAD~${i}`;
+            return <option value={value} key={value}>
+                {i === 0 ? 'Latest' : `HEAD~${i}`}
+            </option>;
+        })
+    });
+
+    function changeSource({target}: InputEvent) {
+        const source = (target as HTMLSelectElement).selectedOptions[0].value;
+
+        settings.source.value = source;
+    }
+
     return <header class='Header'>
         <Breadcrumbs signal={globalPath} />
 
         <div class='links'>
             {backToWptLink}
+
+            <label>
+                <select onInput={changeSource}>
+                    {commitoptions}
+                </select>
+            </label>
 
             <a
                 href='#/settings'

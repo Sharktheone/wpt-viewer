@@ -1,5 +1,4 @@
 import { effect, signal } from '@preact/signals';
-import { Browsers, type FyiBrowser } from './Wpt/Fyi';
 
 function getShowTests() {
     const showTests = localStorage.getItem('showTests');
@@ -8,6 +7,7 @@ function getShowTests() {
 
 export const settings = {
     showTests: signal<boolean>(getShowTests()),
+    source: signal<string>('HEAD~0'),
 };
 
 effect(() => {

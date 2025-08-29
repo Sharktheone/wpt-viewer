@@ -45,8 +45,8 @@ export interface FullEntry extends Subtest {
 export class Fyi {
     #origin: string;
 
-    constructor(origin = "https://raw.githubusercontent.com/Sharktheone/yavashark-data/refs/heads/main") {
-        this.#origin = origin;
+    constructor(version = "HEAD~0", origin = "https://raw.githubusercontent.com/Sharktheone/yavashark-data") {
+        this.#origin = `${origin}/${version}`;
     }
 
     async #get(_path: string) {

@@ -29,7 +29,7 @@ function unwrapSignalStatusMap(map: FilterMap) {
 }
 
 export function App() {
-    const fyi = useComputed(() => new Fyi());
+    const fyi = useComputed(() => new Fyi(settings.source.value));
     const statusFilters: FilterMap = createSignalStatusMap();
     const search = useSignal('');
     const tree = useSignal<Tree|null>(null);
