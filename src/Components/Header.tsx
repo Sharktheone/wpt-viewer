@@ -1,10 +1,12 @@
 import '#/Style/components/Header.scss'
 
-import {Github, Settings, Undo2} from 'lucide-preact'
+import {GitCommitHorizontal, Github, Settings, Undo2} from 'lucide-preact'
 import {Breadcrumbs} from './Ui/Breadcrumbs'
 import {globalPath, page} from '#/Routing'
-import {useComputed} from '@preact/signals'
+import {useComputed, useSignal} from '@preact/signals'
 import {settings} from "#/State.tsx"
+import {Input} from "#/Components/Ui/Input.tsx"
+import {Select} from "#/Components/Ui/Select.tsx"
 
 export function Header() {
     const backToWptLink = useComputed(() =>
@@ -17,10 +19,19 @@ export function Header() {
         </a>
     );
 
+    const isCustomSource = useSignal(settings.source.value == "custom")
+
     const commitoptions = useComputed(() => {
         const NUM_HEAD_MINUS = 5;
 
-        return Array.from({length: NUM_HEAD_MINUS + 1}, (_, i) => {
+        return Array.from({length: NUM_HEAD_MINUS + 2}, (_, i) => {
+            if (i === NUM_HEAD_MINUS + 1) {
+                return <option value='custom' key='custom'>
+                    Custom
+                </option>;
+            }
+
+
             const value = `HEAD~${i}`;
             return <option value={value} key={value}>
                 {i === 0 ? 'Latest' : `HEAD~${i}`}
@@ -31,6 +42,11 @@ export function Header() {
     function changeSource({target}: InputEvent) {
         const source = (target as HTMLSelectElement).selectedOptions[0].value;
 
+        if (source === 'custom') {
+            isCustomSource.value = true;
+            return;
+        }
+        isCustomSource.value = false;
         settings.source.value = source;
     }
 
@@ -40,11 +56,19 @@ export function Header() {
         <div class='links'>
             {backToWptLink}
 
-            <label>
-                <select onInput={changeSource}>
-                    {commitoptions}
-                </select>
-            </label>
+            <Select onInput={changeSource}>
+                {commitoptions}
+            </Select>
+
+            {isCustomSource.value && (
+                <div class="commit-hash">
+                    <Input
+                        placeholder='commit hash'
+                        signal={settings.source}
+                        icon={GitCommitHorizontal}
+                    />
+                </div>
+            )}
 
             <a
                 href='#/settings'

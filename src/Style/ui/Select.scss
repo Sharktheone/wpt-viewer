@@ -1,0 +1,39 @@
+@use '../base/common.scss';
+@use '../mixins/control.scss';
+
+.Select {
+    position: relative;
+    display: inline-block;
+
+    select {
+        appearance: none;
+        -webkit-appearance: none;
+        font: inherit;
+        color: inherit;
+        background: common.$color-control;
+        border-radius: 8px;
+        border: 2px solid #0000;
+        padding: .72rem 2rem .72rem .75rem;
+        box-shadow: common.$shadow-high;
+        cursor: pointer;
+        transition: box-shadow 150ms ease, border-color 150ms ease;
+        line-height: 1.2;
+        min-width: 8rem;
+    }
+
+    select:focus {
+        outline: none;
+        border: common.$border-focus;
+        box-shadow: common.$shadow-focus;
+    }
+
+    .chevron {
+        position: absolute;
+        right: .65rem;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+        font-size: .75rem;
+        opacity: .75;
+    }
+}
