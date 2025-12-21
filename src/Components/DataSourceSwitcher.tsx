@@ -3,11 +3,11 @@ import '#/Style/components/DataSourceSwitcher.scss';
 import { Database, Server, Github, RefreshCw } from 'lucide-preact';
 import { useComputed } from '@preact/signals';
 import { Select } from './Ui/Select';
-import { 
-    appConfig, 
+import {
+    appConfig,
     activeSource,
     activeSourceKey,
-    setActiveSource, 
+    setActiveSource,
     isInteractiveMode,
 } from '#/State';
 import { openRerunModal } from '#/RerunState';
@@ -15,10 +15,10 @@ import { globalPath } from '#/Routing';
 
 export function DataSourceSwitcher() {
     const sourceOptions = useComputed(() => {
-        const config = appConfig.value;
-        if (!config) return [];
-        
-        return Object.entries(config.sources).map(([key, source]) => (
+        const cfg = appConfig.value;
+        if (!cfg) return [];
+
+        return Object.entries(cfg.sources).map(([key, source]) => (
             <option value={key} key={key}>
                 {source.name}
             </option>
@@ -28,7 +28,7 @@ export function DataSourceSwitcher() {
     const sourceIcon = useComputed(() => {
         const source = activeSource.value;
         if (!source) return <Database size={18} />;
-        
+
         switch (source.type) {
             case 'github':
                 return <Github size={18} />;
@@ -61,10 +61,6 @@ export function DataSourceSwitcher() {
         openRerunModal(currentPath);
     }
 
-    if (!appConfig.value) {
-        return null;
-    }
-
     return (
         <div class="DataSourceSwitcher">
             <div class="source-icon" title={activeSource.value?.description}>
@@ -75,11 +71,11 @@ export function DataSourceSwitcher() {
             </Select>
             {modeIndicator}
             {isInteractiveMode.value && (
-                <button 
+                <button
                     type="button"
                     class="rerun-btn"
                     onClick={handleRerunClick}
-                    title={rerunTitle}
+                    title={rerunTitle.value}
                 >
                     <RefreshCw size={16} />
                 </button>

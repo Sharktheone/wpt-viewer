@@ -99,21 +99,27 @@ export async function loadConfig(): Promise<AppConfig> {
         return config;
     } catch (error) {
         console.error('Failed to load config:', error);
-        // Fallback to default local config
+        // Fallback to default config with both sources
         const fallback: AppConfig = {
-            defaultSource: 'local',
+            defaultSource: 'github',
             sources: {
+                github: {
+                    name: 'GitHub',
+                    type: 'github',
+                    baseUrl: 'https://raw.githubusercontent.com/Sharktheone/yavashark-data',
+                    description: 'Read-only results from GitHub',
+                },
                 local: {
                     name: 'Local Server',
                     type: 'local',
                     baseUrl: savedLocalUrl,
-                    description: 'Local development server',
+                    description: 'Local development server with rerun capabilities',
                 }
             },
             defaultProfile: savedDefaultProfile || 'fast',
         };
         appConfig.value = fallback;
-        activeSourceKey.value = 'local';
+        activeSourceKey.value = 'github';
         return fallback;
     }
 }
