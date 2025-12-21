@@ -1,7 +1,7 @@
 import '#/Style/ui/Breadcrumbs.scss';
 
 import { type Signal, useComputed, useSignal } from '@preact/signals';
-import { Bird, ChevronRight, Copy, Check } from 'lucide-preact';
+import { Flower2, ChevronRight, Copy, Check } from 'lucide-preact';
 import { Fragment } from 'preact/jsx-runtime';
 
 function Crumb({ path }: { path: string[] }) {
@@ -68,7 +68,7 @@ export function Breadcrumbs({ signal }: { signal: Signal<string[]> }) {
 
     return <div class='Breadcrumbs'>
         <a class='crumb home-crumb' href='#/'>
-            <Bird size={24} />
+            <Flower2 size={24} />
         </a>
 
         {rightChevron}
