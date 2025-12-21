@@ -1,5 +1,6 @@
 import type { LongStatusType } from './Status';
 import { Tree } from './Tree';
+import { activeSource, type DataSourceConfig } from '#/Config';
 
 export const Browsers = [
     'chrome',
@@ -43,30 +44,55 @@ export interface FullEntry extends Subtest {
 }
 
 export class Fyi {
-    #origin: string;
+    #source: DataSourceConfig;
+    #version: string;
 
-    constructor(version = "HEAD~0", origin = "https://raw.githubusercontent.com/Sharktheone/yavashark-data") {
-        this.#origin = `${origin}/${version}`;
+    constructor(version = "HEAD~0", source?: DataSourceConfig) {
+        this.#version = version;
+        this.#source = source ?? activeSource.value ?? {
+            name: 'Local',
+            type: 'local',
+            baseUrl: 'http://localhost:1215',
+            description: 'Default local server',
+        };
+    }
+
+    get baseUrl(): string {
+        if (this.#source.type === 'github') {
+            return `${this.#source.baseUrl}/${this.#version}`;
+        }
+        return this.#source.baseUrl;
+    }
+
+    get source(): DataSourceConfig {
+        return this.#source;
     }
 
     async #get(_path: string) {
-        return await fetch(`${this.#origin}/results.json`).then(r => r.json());
+        if (this.#source.type === 'github') {
+            return await fetch(`${this.baseUrl}/results.json`).then(r => r.json());
+        }
+        return await fetch(`${this.baseUrl}/api/current`).then(r => r.json());
     }
 
-
     async getTestDetails(path: string): Promise<FullEntry> {
-        let data = await fetch(`${this.#origin}/results/${path}.json`).then(r => r.json());
+        let data: any;
 
-        console.log(path)
+        if (this.#source.type === 'github') {
+            data = { status: 'UNKNOWN', msg: 'Details not available from GitHub source' };
+        } else {
+            data = await fetch(`${this.baseUrl}/api/info/${path}.json`).then(r => r.json());
+        }
 
-        // @ts-ignore
         return {
             test: path,
             subsuite: "",
             status: data.status,
-            duration: 0,
+            duration: data.duration ?? 0,
             message: data.msg,
             subtests: [],
+            known_intermittent: [],
+            name: path,
             run: {
                 id: 0,
                 browser_name: "",
@@ -77,20 +103,16 @@ export class Fyi {
                 full_revision_hash: "",
                 results_url: "",
                 created_at: "",
-                time_start: Date.now(),
-                time_end: Date.now(),
+                time_start: String(Date.now()),
+                time_end: String(Date.now()),
                 raw_results_url: "",
                 labels: [],
-
             }
-
-
-        } as FullEntry
+        } as FullEntry;
     }
 
     async getTree() {
-        let tree = new Tree(this, await this.#get('results'));
-
-        return tree
+        const data = await this.#get('results');
+        return new Tree(this, data);
     }
 }

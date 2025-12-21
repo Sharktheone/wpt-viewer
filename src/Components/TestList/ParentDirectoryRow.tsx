@@ -10,7 +10,7 @@ export function ParentDirectoryRow({ path }: { path: Signal<string[]> }) {
 
     return <tr class='row' onClick={onClick}>
         <td colSpan={2}>
-            <a class='test-name unstyled' href={href}>
+            <a class='test-name unstyled' href={href.value}>
                 <div class='icon' aria-hidden>
                     <ArrowUp size={16} />
                 </div>

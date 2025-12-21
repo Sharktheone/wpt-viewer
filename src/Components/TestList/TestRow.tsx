@@ -14,7 +14,7 @@ export function TestRow({ name, object, path }: RowAttributes) {
 
     return <tr class={`row TestRow TestRow-${style.color}`}>
         <td colSpan={1}>
-            <a class='test-name unstyled' href={href}>
+            <a class='test-name unstyled' href={href.value}>
                 <div class='icon' aria-hidden>
                     <Icon size={16} />
                 </div>

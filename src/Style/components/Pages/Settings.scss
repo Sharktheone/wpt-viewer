@@ -4,27 +4,75 @@
     display: flex;
     flex-direction: column;
     width: 100%;
+    max-width: 500px;
     margin-top: 16px;
     align-items: flex-start;
-    gap: 8px;
+    gap: 16px;
+
+    fieldset {
+        width: 100%;
+        border: common.$border-normal;
+        border-radius: 8px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+
+        legend {
+            font-weight: 600;
+            padding: 0 8px;
+        }
+    }
 
     label {
         display: flex;
         flex-direction: column;
         gap: 4px;
+        width: 100%;
 
         > span {
-            font-weight: 600;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        input[type='text'] {
+            border: common.$border-normal;
+            border-radius: 6px;
+            font: inherit;
+            color: inherit;
+            background: common.$color-control;
+            padding: 0.5rem 0.75rem;
+            width: 100%;
+            box-sizing: border-box;
+
+            &:focus {
+                outline: none;
+                border: common.$border-focus;
+            }
+        }
+
+        input[type='checkbox'] {
+            width: 18px;
+            height: 18px;
+            accent-color: common.$color-primary;
         }
     }
 
     select {
-        border: 0;
-        border-radius: 4px;
+        border: common.$border-normal;
+        border-radius: 6px;
         font: inherit;
-
         color: inherit;
         background: common.$color-control;
-        padding: .5rem 1rem;
+        padding: 0.5rem 0.75rem;
+        width: 100%;
+    }
+
+    .Select {
+        width: 100%;
+    }
+
+    .Button {
+        margin-top: 8px;
     }
 }

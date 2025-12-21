@@ -21,7 +21,29 @@ function Stat({ title, icon: Icon, children }: StatAttributes) {
 
 const formatter = new RelativeTime();
 export function MetadataBlock({ details }: DetailsBlockAttributes) {
-    const runDate = formatter.from(new Date(details.value.run.time_start));
+    const run = details.value.run;
+    const hasRunInfo = run?.time_start && run.time_start !== String(Date.now()).slice(0, 5);
+
+    let runDate = 'Unknown';
+    if (hasRunInfo) {
+        try {
+            const date = new Date(run.time_start);
+            if (!Number.isNaN(date.getTime())) {
+                runDate = formatter.from(date);
+            }
+        } catch {
+            // Keep "Unknown"
+        }
+    }
+
+    const durationNs = details.value.duration || 0;
+    const durationSeconds = durationNs / 1_000_000_000;
+    const osInfo = (run?.os_name || run?.os_version)
+        ? `${run.os_name || 'Unknown'} ${run.os_version || ''}`.trim()
+        : 'N/A';
+    const browserName = run?.browser_name || 'Local';
+    const browserVersion = run?.browser_version || 'N/A';
+    const subsuite = details.value.subsuite || 'no subsuite';
 
     return <div class='Block'>
         <header>
@@ -31,7 +53,7 @@ export function MetadataBlock({ details }: DetailsBlockAttributes) {
         <section class='MetadataBlock'>
             <div class='column'>
                 <Stat icon={Timer} title='Run time'>
-                    {formatSeconds(details.value.duration / 1000)}
+                    {formatSeconds(durationSeconds)}
                 </Stat>
 
                 <Stat icon={Calendar} title='Run date'>
@@ -39,21 +61,21 @@ export function MetadataBlock({ details }: DetailsBlockAttributes) {
                 </Stat>
 
                 <Stat icon={Monitor} title='OS'>
-                    {details.value.run.os_name} {details.value.run.os_version}
+                    {osInfo}
                 </Stat>
             </div>
 
             <div class='column'>
                 <Stat icon={AppWindow} title='Browser'>
-                    {details.value.run.browser_name}
+                    {browserName}
                 </Stat>
 
                 <Stat icon={Tag} title='Browser version'>
-                    {details.value.run.browser_version}
+                    {browserVersion}
                 </Stat>
 
                 <Stat icon={TestTube2} title='Subsuite'>
-                    {details.value.subsuite || 'no subsuite'}
+                    {subsuite}
                 </Stat>
             </div>
         </section>

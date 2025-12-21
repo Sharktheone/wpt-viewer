@@ -13,3 +13,17 @@ export const settings = {
 effect(() => {
     localStorage.setItem('showTests', settings.showTests.value.toString());
 });
+
+export {
+    appConfig,
+    activeSourceKey,
+    activeSource,
+    capabilities,
+    profiles,
+    isInteractiveMode,
+    loadConfig,
+    setActiveSource,
+    checkCapabilities,
+    loadProfiles,
+    initializeSource,
+} from '#/Config';

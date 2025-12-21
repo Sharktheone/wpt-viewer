@@ -8,13 +8,14 @@ import {DirectoryRow} from './DirectoryRow'
 import {ParentDirectoryRow} from './ParentDirectoryRow'
 import {InlineStatusCounter} from '../InlineStatusCounter'
 import {PossibleSingleTestStatuses} from '#/Wpt/Status'
-import {ChevronDown, ChevronUp, TestTube2} from 'lucide-preact'
+import {ChevronDown, ChevronUp, TestTube2, RefreshCw} from 'lucide-preact'
 import {formatNumber} from '#/Utils/Number'
 import {ratioToColorClass} from '../Ui/utils'
 import type {JSX} from 'preact/jsx-runtime'
 import {StatusStyleMap} from '#/StatusStyle'
 import {capitalize} from '#/Utils/Text'
-import {settings} from "#/State.tsx"
+import {settings, isInteractiveMode} from "#/State.tsx"
+import {openRerunModal} from '#/RerunState'
 
 type SortColumn =
     | 'name'
@@ -42,7 +43,7 @@ export interface RowAttributes {
     object: PartialEntry | EntryTree;
 }
 
-function FooterStats({tree}: { tree: Signal<EntryTree> }) {
+function FooterStats({tree, path}: { tree: Signal<EntryTree>, path: Signal<string[]> }) {
     const counters = PossibleSingleTestStatuses
         .map((key) => {
             const count = tree.value[TreeMeta][key]
@@ -60,7 +61,24 @@ function FooterStats({tree}: { tree: Signal<EntryTree> }) {
     const [passed, total] = tree.value[TreeMetaSubtest]
     const ratioColor = ratioToColorClass(passed / total)
 
+    const rerunButton = useComputed(() => {
+        if (!isInteractiveMode.value) return null;
+        const currentPath = path.value.join('/');
+        return (
+            <button 
+                type="button" 
+                class="rerun-btn"
+                onClick={() => openRerunModal(currentPath)}
+                title={currentPath ? `Rerun tests in ${currentPath}` : 'Rerun all tests'}
+            >
+                <RefreshCw size={16} />
+                <span>Rerun</span>
+            </button>
+        );
+    });
+
     return <div class="footer-stats">
+        {rerunButton}
         <span>Folder total:</span>
         <div class="counters">
             {counters}
@@ -199,7 +217,7 @@ export function TestList({path, tree}: TestListAttributes) {
         <tfoot>
         <tr>
             <th colSpan={settings.showTests.peek() ? 3 : 2}>
-                <FooterStats tree={tree}/>
+                <FooterStats tree={tree} path={path}/>
             </th>
         </tr>
         </tfoot>

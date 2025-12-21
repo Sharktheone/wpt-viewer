@@ -1,4 +1,5 @@
 @use '../../mixins/color.scss' as c;
+@use '../../base/common.scss';
 
 .TestList .DirectoryRow {
     .status-badge {
@@ -22,5 +23,11 @@
         font-family: monospace;
         font-size: 12px;
         text-align: end;
+    }
+
+    td:first-child {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 }

@@ -5,12 +5,13 @@ import type { ComponentChildren } from 'preact';
 
 export interface SelectAttributes {
     signal?: Signal<string>;
+    value?: string;
     children: ComponentChildren;
     onInput?: (e: InputEvent) => void;
     className?: string;
 }
 
-export function Select({ signal, children, onInput, className }: SelectAttributes) {
+export function Select({ signal, value, children, onInput, className }: SelectAttributes) {
     function handleInput(e: InputEvent) {
         if (signal) {
             const target = e.target as HTMLSelectElement;
@@ -19,8 +20,10 @@ export function Select({ signal, children, onInput, className }: SelectAttribute
         onInput?.(e);
     }
 
-    return <div class={`Select${className ? ' ' + className : ''}`}>
-        <select onInput={handleInput} value={signal}>
+    const selectValue = signal ?? value;
+
+    return <div class={`Select${className ? ` ${className}` : ''}`}>
+        <select onInput={handleInput} value={selectValue}>
             {children}
         </select>
         <div class='chevron' aria-hidden>▾</div>

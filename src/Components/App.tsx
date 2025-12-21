@@ -15,7 +15,9 @@ import { ShortStatus, type ShortStatusType } from '#/Wpt/Status.ts';
 import { NotFound } from './NotFound.tsx';
 import { globalPath, page } from '#/Routing.tsx';
 import { Settings } from './Pages/Settings.tsx';
-import { settings } from '#/State.tsx';
+import { settings, activeSource, initializeSource } from '#/State.tsx';
+import { RerunModal } from './RerunModal.tsx';
+import { CompareView } from './CompareView.tsx';
 
 function createSignalStatusMap() {
     const entries = ShortStatus.map(s => [s, useSignal(false)]);
@@ -29,7 +31,11 @@ function unwrapSignalStatusMap(map: FilterMap) {
 }
 
 export function App() {
-    const fyi = useComputed(() => new Fyi(settings.source.value));
+    const fyi = useComputed(() => {
+        const source = activeSource.value;
+        return new Fyi(settings.source.value, source ?? undefined);
+    });
+
     const statusFilters: FilterMap = createSignalStatusMap();
     const search = useSignal('');
     const tree = useSignal<Tree|null>(null);
@@ -78,9 +84,14 @@ export function App() {
     });
 
     useSignalEffect(() => {
-        fyi.value.getTree().then(t => {
+        const currentFyi = fyi.value;
+        tree.value = null;
+
+        currentFyi.getTree().then(t => {
             tree.value = t;
         });
+
+        initializeSource();
     });
 
     return <div class='App'>
@@ -99,5 +110,8 @@ export function App() {
         <Suspense until={tree}>
             {suspenseContent}
         </Suspense>
+
+        <RerunModal />
+        <CompareView />
     </div>
 }

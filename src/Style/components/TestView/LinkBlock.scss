@@ -1,3 +1,5 @@
+@use '../../base/common.scss';
+
 .TestView .LinkBlock {
     flex-direction: column;
     gap: 8px;
@@ -8,6 +10,25 @@
 
         a {
             margin-left: 8px;
+        }
+    }
+
+    .rerun-link {
+        .rerun-btn {
+            margin-left: 8px;
+            background: none;
+            border: none;
+            color: common.$color-primary;
+            font: inherit;
+            cursor: pointer;
+            padding: 0;
+            text-decoration: underline;
+            text-decoration-color: transparent;
+            transition: text-decoration-color 150ms;
+
+            &:hover {
+                text-decoration-color: currentColor;
+            }
         }
     }
 }

@@ -1,5 +1,4 @@
 @use '../../mixins/color';
-@use '../../base/common.scss';
 
 .TestView .StatusBlock {
     flex-direction: row;
@@ -10,8 +9,6 @@
     gap: 8px;
 
     font-weight: 600;
-    border-bottom-left-radius: inherit;
-    border-bottom-right-radius: inherit;
 
     @include color.background-colorable;
 

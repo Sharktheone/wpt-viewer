@@ -24,11 +24,24 @@
     //    margin: auto 0;
     //}
 
-    .links a {
+    .links a,
+    .links .header-btn {
         line-height: 0;
         border-radius: 4px;
         color: inherit;
         padding: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        border: none;
+        cursor: pointer;
+
+        svg {
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+        }
 
         &:hover {
             box-shadow: 0 0 0 2px common.$color-primary;

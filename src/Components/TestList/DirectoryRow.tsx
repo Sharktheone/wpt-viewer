@@ -5,8 +5,8 @@ import { Folder } from 'lucide-preact';
 import type { RowAttributes } from './Component';
 import { TestCompletion } from './TestCompletion';
 import { useComputed } from '@preact/signals';
-import {TestNum} from "#/Components/TestList/TestNum.tsx"
-import {settings} from "#/State.tsx"
+import { TestNum } from "#/Components/TestList/TestNum.tsx"
+import { settings } from "#/State.tsx"
 
 export function DirectoryRow({ name, object, path }: RowAttributes) {
     const subtree = object as EntryTree;
@@ -20,7 +20,7 @@ export function DirectoryRow({ name, object, path }: RowAttributes) {
 
     return <tr class='row DirectoryRow' onClick={onClick}>
         <td>
-            <a class='test-name unstyled' href={href}>
+            <a class='test-name unstyled' href={href.value}>
                 <div class='icon' aria-hidden>
                     <Folder size={16} />
                 </div>

@@ -71,16 +71,9 @@ export class Tree {
     }
 
     static recomputeTestEntry(entry: Test262Entry): CompactEntry {
-        let status = entry.s;
+        const status = entry.s;
 
-
-        let pass = false;
-
-        if (status === 'O') {
-            pass = true;
-        } else if (status === 'P') {
-            pass = true;
-        }
+        const pass = status === 'O' || status === 'P';
 
         return {
             s: status,
@@ -135,7 +128,7 @@ export class Tree {
             // remove leading slash
             // key = key.slice(1);
 
-            let key = value.p;
+            const key = value.p;
 
             // some status values are wrong, we need to fix them
             value = Tree.recomputeTestEntry(value);
@@ -178,7 +171,7 @@ export class Tree {
     }
 
     navigate(path: string[], { search = '', statuses = [] }: NavigateParams = {}): PartialEntry|EntryTree|null {
-        let branch = followDeep(this.tree, path);
+        const branch = followDeep(this.tree, path);
 
         if (!branch) {
             return null;
@@ -188,7 +181,7 @@ export class Tree {
             return branch;
         }
 
-        if (!(TreeMeta in branch || TreeMetaSubtest in branch)) {
+        if (!(TreeMeta in branch) && !(TreeMetaSubtest in branch)) {
             return null;
         }
 
@@ -209,15 +202,15 @@ export class Tree {
             filters.push(key => key.toLowerCase().includes(search));
         }
 
-        branch = Reflect.ownKeys(branch as EntryTree)
+        const entries = Reflect.ownKeys(branch as EntryTree)
             // @ts-ignore
             .map(key => [key, branch[key]])
             .filter(([key, value]) => {
-                return typeof key === 'symbol' ||
-                    filters.every(fn => fn(key, value))
+                if (typeof key === 'symbol') return true;
+                return filters.every(fn => fn(key as string, value))
             });
 
         // @ts-ignore
-        return Object.fromEntries(branch);
+        return Object.fromEntries(entries);
     }
 }
