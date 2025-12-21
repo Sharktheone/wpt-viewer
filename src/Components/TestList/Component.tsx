@@ -14,7 +14,7 @@ import {ratioToColorClass} from '../Ui/utils'
 import type {JSX} from 'preact/jsx-runtime'
 import {StatusStyleMap} from '#/StatusStyle'
 import {capitalize} from '#/Utils/Text'
-import {settings, isInteractiveMode} from "#/State.tsx"
+import {settings, isInteractiveMode, type TestSortMode} from "#/State.tsx"
 import {openRerunModal} from '#/RerunState'
 
 type SortColumn =
@@ -140,6 +140,31 @@ function entryOrTreeRatio(value: PartialEntry | EntryTree) {
     return value[TreeMetaSubtest][0] / value[TreeMetaSubtest][1]
 }
 
+function getNumberSortValue(value: PartialEntry | EntryTree, mode: TestSortMode): number {
+    if (value instanceof PartialEntry) {
+        switch (mode) {
+            case 'passed':
+                return value.passedTests;
+            case 'failed':
+                return value.totalTests - value.passedTests;
+            case 'total':
+            default:
+                return value.totalTests;
+        }
+    }
+    
+    const [passed, total] = value[TreeMetaSubtest];
+    switch (mode) {
+        case 'passed':
+            return passed;
+        case 'failed':
+            return total - passed;
+        case 'total':
+        default:
+            return total;
+    }
+}
+
 function sortCallback(sort: EntryContext, [ka, va]: TreeObjEntry, [kb, vb]: TreeObjEntry) {
     let order = (Number(va instanceof PartialEntry) - Number(vb instanceof PartialEntry))
 
@@ -151,8 +176,9 @@ function sortCallback(sort: EntryContext, [ka, va]: TreeObjEntry, [kb, vb]: Tree
 
         order ||= (ratioA - ratioB) * sort.direction.value
     } else if (sort.column.value === 'number') {
-        const numA = va instanceof PartialEntry ? va.totalTests : va[TreeMetaSubtest][0]
-        const numB = vb instanceof PartialEntry ? vb.totalTests : vb[TreeMetaSubtest][0]
+        const mode = settings.testSortMode.value;
+        const numA = getNumberSortValue(va, mode);
+        const numB = getNumberSortValue(vb, mode);
 
         order ||= (numA - numB) * sort.direction.value
     }

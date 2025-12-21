@@ -2,7 +2,7 @@ import '#/Style/components/Pages/Settings.scss';
 import { Save } from 'lucide-preact';
 import { Button } from '../Ui/Button';
 import { Select } from '../Ui/Select';
-import { settings, profiles, appConfig } from '#/State';
+import { settings, profiles, appConfig, type TestSortMode } from '#/State';
 import { useComputed, useSignal } from '@preact/signals';
 
 export function Settings() {
@@ -12,6 +12,7 @@ export function Settings() {
     const defaultProfile = useSignal(
         localStorage.getItem('defaultProfile') || appConfig.value?.defaultProfile || ''
     );
+    const testSortMode = useSignal<TestSortMode>(settings.testSortMode.value);
 
     const profileOptions = useComputed(() => {
         const profilesData = profiles.value;
@@ -38,6 +39,9 @@ export function Settings() {
         localStorage.setItem('defaultProfile', profile);
         defaultProfile.value = profile;
 
+        const sortMode = form.get('testSortMode') as TestSortMode;
+        settings.testSortMode.value = sortMode;
+
         if (appConfig.value) {
             appConfig.value = {
                 ...appConfig.value,
@@ -62,6 +66,19 @@ export function Settings() {
             <label>
                 <span>Show number of tests</span>
                 <input type='checkbox' name='showTests' checked={settings.showTests.peek()} />
+            </label>
+
+            <label>
+                <span>Sort tests column by</span>
+                <Select
+                    value={testSortMode.value}
+                    onInput={(e) => { testSortMode.value = (e.target as HTMLSelectElement).value as TestSortMode; }}
+                >
+                    <option value="total">Total tests</option>
+                    <option value="passed">Passed tests</option>
+                    <option value="failed">Failed tests</option>
+                </Select>
+                <input type="hidden" name="testSortMode" value={testSortMode.value} />
             </label>
         </fieldset>
 
