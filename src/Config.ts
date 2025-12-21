@@ -35,11 +35,40 @@ export interface ProfilesConfig {
     profiles: Record<string, Profile>;
 }
 
-// Application config loaded from config.json
-export const appConfig = signal<AppConfig | null>(null);
+// Get saved local URL from localStorage
+function getSavedLocalUrl(): string {
+    return localStorage.getItem('localServerUrl') || 'http://localhost:1215';
+}
+
+// Default config
+function getDefaultConfig(): AppConfig {
+    return {
+        defaultSource: 'github',
+        sources: {
+            github: {
+                name: 'GitHub',
+                type: 'github',
+                baseUrl: 'https://raw.githubusercontent.com/Sharktheone/yavashark-data',
+                description: 'Read-only results from GitHub',
+            },
+            local: {
+                name: 'Local Server',
+                type: 'local',
+                baseUrl: getSavedLocalUrl(),
+                description: 'Local development server with rerun capabilities',
+            }
+        },
+        defaultProfile: localStorage.getItem('defaultProfile') || 'fast',
+    };
+}
+
+// Application config - initialized with defaults immediately
+export const appConfig = signal<AppConfig>(getDefaultConfig());
 
 // Current active data source key
-export const activeSourceKey = signal<string>('');
+export const activeSourceKey = signal<string>(
+    localStorage.getItem('dataSource') || 'github'
+);
 
 // Capabilities of the active source
 export const capabilities = signal<Capabilities>({
@@ -67,8 +96,7 @@ export const activeSource = computed(() => {
 
 // Load configuration from config.json
 export async function loadConfig(): Promise<AppConfig> {
-    // Get saved local URL from localStorage
-    const savedLocalUrl = localStorage.getItem('localServerUrl') || 'http://localhost:1215';
+    const savedLocalUrl = getSavedLocalUrl();
     const savedDefaultProfile = localStorage.getItem('defaultProfile') || '';
 
     try {
@@ -77,50 +105,44 @@ export async function loadConfig(): Promise<AppConfig> {
             throw new Error(`Failed to load config: ${response.status}`);
         }
         const config: AppConfig = await response.json();
-        
-        // Override with localStorage values
-        if (config.sources.local) {
+
+        // Ensure we always have both sources
+        if (!config.sources.github) {
+            config.sources.github = {
+                name: 'GitHub',
+                type: 'github',
+                baseUrl: 'https://raw.githubusercontent.com/Sharktheone/yavashark-data',
+                description: 'Read-only results from GitHub',
+            };
+        }
+        if (!config.sources.local) {
+            config.sources.local = {
+                name: 'Local Server',
+                type: 'local',
+                baseUrl: savedLocalUrl,
+                description: 'Local development server with rerun capabilities',
+            };
+        } else {
+            // Override local URL with saved value
             config.sources.local.baseUrl = savedLocalUrl;
         }
+
         if (savedDefaultProfile) {
             config.defaultProfile = savedDefaultProfile;
         }
-        
+
         appConfig.value = config;
-        
-        // Load saved source from localStorage or use default
-        const savedSource = localStorage.getItem('dataSource');
-        if (savedSource && config.sources[savedSource]) {
-            activeSourceKey.value = savedSource;
-        } else {
-            activeSourceKey.value = config.defaultSource;
+
+        // Only update source key if current one is invalid
+        if (!config.sources[activeSourceKey.value]) {
+            activeSourceKey.value = config.defaultSource || 'github';
         }
-        
+
         return config;
     } catch (error) {
         console.error('Failed to load config:', error);
-        // Fallback to default config with both sources
-        const fallback: AppConfig = {
-            defaultSource: 'github',
-            sources: {
-                github: {
-                    name: 'GitHub',
-                    type: 'github',
-                    baseUrl: 'https://raw.githubusercontent.com/Sharktheone/yavashark-data',
-                    description: 'Read-only results from GitHub',
-                },
-                local: {
-                    name: 'Local Server',
-                    type: 'local',
-                    baseUrl: savedLocalUrl,
-                    description: 'Local development server with rerun capabilities',
-                }
-            },
-            defaultProfile: savedDefaultProfile || 'fast',
-        };
-        appConfig.value = fallback;
-        activeSourceKey.value = 'github';
-        return fallback;
+        // Keep using default config
+        return appConfig.value;
     }
 }
 
@@ -133,7 +155,7 @@ export function setActiveSource(key: string): void {
     }
     activeSourceKey.value = key;
     localStorage.setItem('dataSource', key);
-    
+
     // Reset capabilities when switching sources
     capabilities.value = {
         canRerun: false,
@@ -147,7 +169,7 @@ export async function checkCapabilities(source: DataSourceConfig): Promise<Capab
     if (source.type !== 'local') {
         return { canRerun: false, canRebuild: false, profiles: [] };
     }
-    
+
     try {
         const response = await fetch(`${source.baseUrl}/api/capabilities`);
         if (!response.ok) {
@@ -164,7 +186,7 @@ export async function loadProfiles(source: DataSourceConfig): Promise<ProfilesCo
     if (source.type !== 'local') {
         return null;
     }
-    
+
     try {
         const response = await fetch(`${source.baseUrl}/api/profiles`);
         if (!response.ok) {
@@ -182,10 +204,10 @@ export async function loadProfiles(source: DataSourceConfig): Promise<ProfilesCo
 export async function initializeSource(): Promise<void> {
     const source = activeSource.value;
     if (!source) return;
-    
+
     const caps = await checkCapabilities(source);
     capabilities.value = caps;
-    
+
     if (caps.canRerun) {
         await loadProfiles(source);
     }
