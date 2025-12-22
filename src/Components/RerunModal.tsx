@@ -1,6 +1,6 @@
 import '#/Style/components/RerunModal.scss';
 
-import { X, Play, RefreshCw, Wrench, ChevronDown, ChevronUp, AlertTriangle, Square, TrendingUp, TrendingDown, History, Trash2, GitCommit, Clock } from 'lucide-preact';
+import { X, Play, RefreshCw, Wrench, ChevronDown, ChevronUp, AlertTriangle, Square, TrendingUp, TrendingDown, History, Trash2, GitCommit, Clock, Terminal } from 'lucide-preact';
 import { useComputed, useSignal, type Signal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import { Button } from './Ui/Button';
@@ -24,6 +24,8 @@ import {
     gitCommits,
     diffBaseline,
     fetchGitCommits,
+    buildOutput,
+    showBuildOutput,
     type TestResult,
     type DiffBaseline,
 } from '#/RerunState';
@@ -293,6 +295,50 @@ function TransitionGroupSection({ group, expandedGroups }: { group: TransitionGr
     );
 }
 
+// Build output display component
+function BuildOutputSection() {
+    const outputRef = useRef<HTMLDivElement>(null);
+    const lines = buildOutput.value;
+    const isBuilding = rerunProgress.value.phase === 'building';
+    
+    // Auto-scroll to bottom when new lines are added
+    useEffect(() => {
+        if (outputRef.current && showBuildOutput.value) {
+            outputRef.current.scrollTop = outputRef.current.scrollHeight;
+        }
+    }, [lines.length]);
+    
+    if (lines.length === 0 && !isBuilding) {
+        return null;
+    }
+    
+    return (
+        <div class="build-output-section">
+            <button 
+                type="button"
+                class="build-output-toggle"
+                onClick={() => { showBuildOutput.value = !showBuildOutput.value; }}
+            >
+                {showBuildOutput.value ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                <Terminal size={16} />
+                <span>Build Output ({lines.length} lines)</span>
+                {isBuilding && <RefreshCw size={14} class="spinning" />}
+            </button>
+            
+            {showBuildOutput.value && (
+                <div class="build-output-container" ref={outputRef}>
+                    {lines.map((line, i) => (
+                        <div class="build-output-line" key={i}>{line}</div>
+                    ))}
+                    {isBuilding && lines.length === 0 && (
+                        <div class="build-output-line build-waiting">Waiting for build output...</div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
 export function RerunModal() {
     const expandedGroups = useSignal<Set<string>>(new Set());
     const historyOpen = useSignal(false);
@@ -520,6 +566,8 @@ export function RerunModal() {
                                 {isRunning.value && <RefreshCw class="spinning" size={16} />}
                                 <span>{phaseText}</span>
                             </div>
+
+                            <BuildOutputSection />
 
                             <div class="progress-bar-container">
                                 <div class="progress-bar-multi">

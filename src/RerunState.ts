@@ -104,6 +104,10 @@ export const rerunError = signal<string | null>(null);
 export const showResults = signal(false);
 export const showChangedTests = signal(false);
 
+// Build output lines
+export const buildOutput = signal<string[]>([]);
+export const showBuildOutput = signal(true);
+
 // Backend history (fetched from server)
 export const backendHistory = signal<BackendRunHistoryEntry[]>([]);
 export const historyLoading = signal(false);
@@ -307,6 +311,8 @@ export function startRerun() {
     rerunResults.value = [];
     rerunError.value = null;
     diffStats.value = emptyDiffStats();
+    buildOutput.value = [];
+    showBuildOutput.value = true;
     abortController = new AbortController();
 
     // Connect to SSE endpoint
@@ -330,6 +336,11 @@ export function startRerun() {
                     if (data.data?.runId) {
                         activeRunId = data.data.runId;
                     }
+                    break;
+
+                case 'build_output':
+                    // Append build output line
+                    buildOutput.value = [...buildOutput.value, data.message];
                     break;
                     
                 case 'test': {

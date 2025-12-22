@@ -610,6 +610,65 @@
     }
 }
 
+// Build output section
+.build-output-section {
+    margin-bottom: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    overflow: hidden;
+
+    .build-output-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: none;
+        color: inherit;
+        font: inherit;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: background 150ms;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .spinning {
+            animation: spin 1s linear infinite;
+            margin-left: auto;
+        }
+    }
+
+    .build-output-container {
+        max-height: 200px;
+        overflow-y: auto;
+        background: rgba(0, 0, 0, 0.3);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        font-family: monospace;
+        font-size: 0.75rem;
+        line-height: 1.4;
+
+        .build-output-line {
+            padding: 0.15rem 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: rgba(255, 255, 255, 0.85);
+
+            &:last-child {
+                border-bottom: none;
+            }
+
+            &.build-waiting {
+                color: rgba(255, 255, 255, 0.5);
+                font-style: italic;
+            }
+        }
+    }
+}
+
 // Changes section with grouped transitions
 .changes-section {
     margin-top: 1rem;
