@@ -79,7 +79,18 @@ export class Fyi {
         let data: any;
 
         if (this.#source.type === 'github') {
-            data = { status: 'UNKNOWN', msg: 'Details not available from GitHub source' };
+            // Fetch from GitHub raw API: /results/{path}.json
+            const url = `${this.baseUrl}/results/${path}.json`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    data = { status: 'UNKNOWN', msg: `Failed to fetch details: ${response.status}` };
+                } else {
+                    data = await response.json();
+                }
+            } catch (error) {
+                data = { status: 'UNKNOWN', msg: `Failed to fetch details: ${error}` };
+            }
         } else {
             data = await fetch(`${this.baseUrl}/api/info/${path}.json`).then(r => r.json());
         }
