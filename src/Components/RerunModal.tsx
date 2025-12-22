@@ -567,8 +567,6 @@ export function RerunModal() {
                                 <span>{phaseText}</span>
                             </div>
 
-                            <BuildOutputSection />
-
                             <div class="progress-bar-container">
                                 <div class="progress-bar-multi">
                                     <div class="progress-segment pass" style={{ width: `${progressBars.value.passed}%` }} />
@@ -661,6 +659,8 @@ export function RerunModal() {
                             )}
                         </div>
                     )}
+
+                    <BuildOutputSection />
                 </div>
 
                 <div class="modal-footer">
