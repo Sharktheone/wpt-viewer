@@ -108,6 +108,19 @@ export const showChangedTests = signal(false);
 export const buildOutput = signal<string[]>([]);
 export const showBuildOutput = signal(true);
 
+// Timing signals
+export const timingData = signal<{
+    startTime: number | null;      // When the entire run started
+    buildEndTime: number | null;   // When build finished (if rebuild was enabled)
+    runStartTime: number | null;   // When test running started
+    endTime: number | null;        // When everything finished
+}>({
+    startTime: null,
+    buildEndTime: null,
+    runStartTime: null,
+    endTime: null,
+});
+
 // Backend history (fetched from server)
 export const backendHistory = signal<BackendRunHistoryEntry[]>([]);
 export const historyLoading = signal(false);
@@ -221,6 +234,12 @@ export function openRerunModal(path = '') {
     showResults.value = false;
     showChangedTests.value = false;
     diffStats.value = emptyDiffStats();
+    timingData.value = {
+        startTime: null,
+        buildEndTime: null,
+        runStartTime: null,
+        endTime: null,
+    };
     rerunModalOpen.value = true;
     
     // Fetch history when opening modal
@@ -313,6 +332,12 @@ export function startRerun() {
     diffStats.value = emptyDiffStats();
     buildOutput.value = [];
     showBuildOutput.value = true;
+    timingData.value = {
+        startTime: Date.now(),
+        buildEndTime: null,
+        runStartTime: config.rebuild ? null : Date.now(), // If no rebuild, run starts immediately
+        endTime: null,
+    };
     abortController = new AbortController();
 
     // Connect to SSE endpoint
@@ -328,7 +353,34 @@ export function startRerun() {
                     activeRunId = data.data?.runId || null;
                     break;
 
-                case 'progress':
+                case 'progress': {
+                    const prevPhase = rerunProgress.value.phase;
+                    const newPhase = data.data?.phase;
+                    
+                    // Track timing on phase transitions
+                    if (prevPhase !== newPhase) {
+                        const now = Date.now();
+                        const timing = timingData.value;
+                        
+                        // Build finished -> running started
+                        if (prevPhase === 'building' && (newPhase === 'counting' || newPhase === 'running')) {
+                            timingData.value = {
+                                ...timing,
+                                buildEndTime: now,
+                                runStartTime: now,
+                            };
+                        }
+                        // Counting finished -> running started
+                        else if (prevPhase === 'counting' && newPhase === 'running') {
+                            if (!timing.runStartTime) {
+                                timingData.value = {
+                                    ...timing,
+                                    runStartTime: now,
+                                };
+                            }
+                        }
+                    }
+                    
                     rerunProgress.value = {
                         ...rerunProgress.value,
                         ...data.data,
@@ -337,6 +389,7 @@ export function startRerun() {
                         activeRunId = data.data.runId;
                     }
                     break;
+                }
 
                 case 'build_output':
                     // Append build output line
@@ -392,6 +445,10 @@ export function startRerun() {
                         ...rerunProgress.value,
                         phase: 'error',
                     };
+                    timingData.value = {
+                        ...timingData.value,
+                        endTime: Date.now(),
+                    };
                     activeRunId = null;
                     eventSource?.close();
                     eventSource = null;
@@ -404,6 +461,10 @@ export function startRerun() {
                         ...rerunProgress.value,
                         phase: 'complete',
                     };
+                    timingData.value = {
+                        ...timingData.value,
+                        endTime: Date.now(),
+                    };
                     activeRunId = null;
                     eventSource?.close();
                     eventSource = null;
@@ -415,6 +476,10 @@ export function startRerun() {
                     rerunProgress.value = {
                         ...rerunProgress.value,
                         phase: 'cancelled',
+                    };
+                    timingData.value = {
+                        ...timingData.value,
+                        endTime: Date.now(),
                     };
                     activeRunId = null;
                     eventSource?.close();
@@ -470,3 +535,57 @@ export const progressBreakdown = computed(() => {
         skipped: (p.skipped / total) * 100,
     };
 });
+
+// Format duration in ms to human readable string
+export function formatDuration(ms: number): string {
+    if (ms < 1000) return `${ms}ms`;
+    const seconds = Math.floor(ms / 1000);
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    if (minutes < 60) return `${minutes}m ${remainingSeconds}s`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return `${hours}h ${remainingMinutes}m`;
+}
+
+// Get current timing values (call this in a component with an interval for live updates)
+export function getTimingDisplay() {
+    const timing = timingData.value;
+    const phase = rerunProgress.value.phase;
+    const now = Date.now();
+    
+    // Use current time if still running, otherwise use end time
+    const currentTime = timing.endTime || (phase !== 'idle' ? now : null);
+    
+    let buildDuration: string | null = null;
+    let testDuration: string | null = null;
+    let totalDuration: string | null = null;
+    
+    if (timing.startTime && currentTime) {
+        totalDuration = formatDuration(currentTime - timing.startTime);
+    }
+    
+    if (timing.startTime && timing.buildEndTime) {
+        buildDuration = formatDuration(timing.buildEndTime - timing.startTime);
+    } else if (timing.startTime && phase === 'building') {
+        // Currently building
+        buildDuration = formatDuration(now - timing.startTime);
+    }
+    
+    if (timing.runStartTime && currentTime) {
+        testDuration = formatDuration(currentTime - timing.runStartTime);
+    } else if (timing.runStartTime && (phase === 'running' || phase === 'counting')) {
+        // Currently running tests
+        testDuration = formatDuration(now - timing.runStartTime);
+    }
+    
+    return {
+        buildDuration,
+        testDuration,
+        totalDuration,
+    };
+}
+
+// Computed timing values for display (static, doesn't update while running)
+export const timingDisplay = computed(() => getTimingDisplay());

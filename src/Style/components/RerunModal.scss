@@ -510,6 +510,27 @@
         .spinning {
             animation: spin 1s linear infinite;
         }
+
+        .timing-inline {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            margin-left: auto;
+            font-size: 0.85rem;
+            font-weight: 400;
+            color: rgba(255, 255, 255, 0.7);
+
+            .timing-total {
+                font-weight: 600;
+                font-variant-numeric: tabular-nums;
+                color: rgba(255, 255, 255, 0.9);
+            }
+
+            .timing-breakdown {
+                font-size: 0.75rem;
+                opacity: 0.7;
+            }
+        }
     }
 
     .progress-bar-container {

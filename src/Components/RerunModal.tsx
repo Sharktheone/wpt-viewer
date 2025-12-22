@@ -1,6 +1,6 @@
 import '#/Style/components/RerunModal.scss';
 
-import { X, Play, RefreshCw, Wrench, ChevronDown, ChevronUp, AlertTriangle, Square, TrendingUp, TrendingDown, History, Trash2, GitCommit, Clock, Terminal } from 'lucide-preact';
+import { X, Play, RefreshCw, Wrench, ChevronDown, ChevronUp, AlertTriangle, Square, TrendingUp, TrendingDown, History, Trash2, GitCommit, Clock, Terminal, Timer } from 'lucide-preact';
 import { useComputed, useSignal, type Signal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import { Button } from './Ui/Button';
@@ -26,6 +26,7 @@ import {
     fetchGitCommits,
     buildOutput,
     showBuildOutput,
+    getTimingDisplay,
     type TestResult,
     type DiffBaseline,
 } from '#/RerunState';
@@ -339,6 +340,47 @@ function BuildOutputSection() {
     );
 }
 
+// Timing display component with live updates while running
+function TimingSection() {
+    const timing = useSignal(getTimingDisplay());
+    const running = isRunning.value;
+    
+    // Update timing every second while running
+    useEffect(() => {
+        if (!running) {
+            // Update once when stopped to show final time
+            timing.value = getTimingDisplay();
+            return;
+        }
+        
+        const interval = setInterval(() => {
+            timing.value = getTimingDisplay();
+        }, 1000);
+        
+        return () => clearInterval(interval);
+    }, [running]);
+    
+    const { buildDuration, testDuration, totalDuration } = timing.value;
+    
+    if (!totalDuration) {
+        return null;
+    }
+    
+    // Compact display: show build time in parentheses if available, otherwise just total
+    // e.g., "2m 35s" or "2m 35s (build: 45s)"
+    return (
+        <span class="timing-inline">
+            <Timer size={14} />
+            <span class="timing-total">{totalDuration}</span>
+            {buildDuration && testDuration && (
+                <span class="timing-breakdown">
+                    (build: {buildDuration}, tests: {testDuration})
+                </span>
+            )}
+        </span>
+    );
+}
+
 export function RerunModal() {
     const expandedGroups = useSignal<Set<string>>(new Set());
     const historyOpen = useSignal(false);
@@ -565,6 +607,7 @@ export function RerunModal() {
                             <div class="phase-indicator">
                                 {isRunning.value && <RefreshCw class="spinning" size={16} />}
                                 <span>{phaseText}</span>
+                                <TimingSection />
                             </div>
 
                             <div class="progress-bar-container">
