@@ -200,7 +200,7 @@ async function fetchCurrentResults(): Promise<Map<string, string>> {
     // Try local server
     if (source?.type === 'local') {
         try {
-            const res = await fetch(`${source.baseUrl}/api/results`);
+            const res = await fetch(`${source.baseUrl}/api/current`);
             if (res.ok) {
                 const data = await res.json();
                 const map = new Map<string, string>();
