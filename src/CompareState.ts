@@ -1,5 +1,6 @@
 import { signal, computed } from '@preact/signals';
 import { activeSource } from './Config';
+import { backendHistory, fetchHistory, type BackendRunHistoryEntry } from './RerunState';
 
 // GitHub constants for yavashark-data repo
 const DATA_REPO_OWNER = 'Sharktheone';
@@ -17,7 +18,7 @@ export interface GitCommit {
 }
 
 export interface CompareSource {
-    type: 'commit' | 'run' | 'current';
+    type: 'commit' | 'run' | 'current' | 'local';
     ref?: string;        // commit hash or run ID
     label?: string;      // display label
 }
@@ -69,6 +70,8 @@ export const compareStats = signal<CompareStats | null>(null);
 export const changedTests = signal<CompareResult[]>([]);
 export const commits = signal<GitCommit[]>([]);
 export const commitsLoading = signal(false);
+
+export { backendHistory, fetchHistory, type BackendRunHistoryEntry };
 
 // Helper to create empty status counts
 function emptyStatusCounts(): StatusCounts {
@@ -235,12 +238,37 @@ async function fetchResultsForSource(source: CompareSource): Promise<Map<string,
             return fetchResultsForCommit(source.ref);
         case 'current':
             return fetchCurrentResults();
+        case 'local':
+            return fetchLocalResults();
         case 'run':
-            // TODO: Implement run history support
-            throw new Error('Run history comparison not yet implemented');
+            throw new Error('Run history comparison is not yet supported. Run results need to be stored separately.');
         default:
             throw new Error(`Unknown source type: ${source.type}`);
     }
+}
+
+async function fetchLocalResults(): Promise<Map<string, string>> {
+    const source = activeSource.value;
+    
+    if (source?.type !== 'local') {
+        throw new Error('Local source is not available. Connect to a local server first.');
+    }
+    
+    const res = await fetch(`${source.baseUrl}/api/current`);
+    if (!res.ok) {
+        throw new Error(`Failed to fetch local results: ${res.status}`);
+    }
+    
+    const data = await res.json();
+    const map = new Map<string, string>();
+    for (const item of data) {
+        const path = item.p || item.path;
+        const rawStatus = item.s ?? item.status;
+        if (path && rawStatus !== undefined) {
+            map.set(path, normalizeStatus(rawStatus));
+        }
+    }
+    return map;
 }
 
 // Calculate status counts from results
@@ -379,7 +407,9 @@ export const transitionGroups = computed(() => {
 export function getSourceLabel(source: CompareSource): string {
     switch (source.type) {
         case 'current':
-            return 'Current results';
+            return 'Current (GitHub/latest)';
+        case 'local':
+            return 'Local server';
         case 'commit':
             return source.label || (source.ref ? `Commit ${source.ref.slice(0, 7)}` : 'Select commit...');
         case 'run':
@@ -398,6 +428,9 @@ export function openCompareModal(): void {
     if (commits.value.length === 0) {
         fetchCommits();
     }
+    
+    // Fetch run history
+    fetchHistory();
 }
 
 // Close the compare modal  

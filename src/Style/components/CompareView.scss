@@ -200,6 +200,63 @@
             background: rgba(99, 102, 241, 0.15);
             color: #818cf8;
         }
+
+        &.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+
+            &:hover {
+                background: none;
+            }
+        }
+    }
+
+    .unavailable {
+        font-size: 0.7rem;
+        opacity: 0.5;
+        margin-left: auto;
+    }
+
+    .run-list {
+        max-height: 150px;
+        overflow-y: auto;
+    }
+
+    .run-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.4rem 0.75rem;
+        background: none;
+        border: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        color: inherit;
+        font: inherit;
+        font-size: 0.75rem;
+        text-align: left;
+
+        .run-path {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .run-stats {
+            color: #22c55e;
+            flex-shrink: 0;
+        }
+
+        .run-date {
+            color: rgba(255, 255, 255, 0.5);
+            flex-shrink: 0;
+        }
+
+        &.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     }
 
     .source-section-label {

@@ -1,6 +1,6 @@
 import '#/Style/components/CompareView.scss';
 
-import { X, GitCompare, RefreshCw, ChevronDown, ChevronUp, TrendingUp, TrendingDown, ArrowLeftRight, GitCommit, Clock } from 'lucide-preact';
+import { X, GitCompare, RefreshCw, ChevronDown, ChevronUp, TrendingUp, TrendingDown, ArrowLeftRight, GitCommit, Clock, Server, History } from 'lucide-preact';
 import { useSignal, type Signal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import { Button } from './Ui/Button';
@@ -20,9 +20,11 @@ import {
     resetComparison,
     swapSources,
     getSourceLabel,
+    backendHistory,
     type CompareSource,
     type TransitionGroup,
 } from '#/CompareState';
+import { activeSource } from '#/Config';
 
 // Format relative time
 function formatRelativeTime(dateStr: string): string {
@@ -71,6 +73,8 @@ function SourceSelector({
 }) {
     const commitList = commits.value;
     const loading = commitsLoading.value;
+    const history = backendHistory.value;
+    const isLocalAvailable = activeSource.value?.type === 'local';
     const dropdownStyle = useSignal<{ top: number; left: number } | null>(null);
     
     // Fetch commits when dropdown opens
@@ -106,20 +110,33 @@ function SourceSelector({
                 top: `${dropdownStyle.value.top}px`,
                 left: `${dropdownStyle.value.left}px`,
             }}
+            onClick={(e) => e.stopPropagation()}
         >
             <div class="source-dropdown-header">
                 Select {label}
             </div>
             
             <div class="source-options">
-                {/* Current results option */}
+                {/* Current results option (GitHub/latest) */}
                 <button
                     type="button"
                     class={`source-option ${source.value.type === 'current' ? 'active' : ''}`}
                     onClick={() => selectSource({ type: 'current' })}
                 >
                     <Clock size={14} />
-                    <span>Current results</span>
+                    <span>Current (GitHub/latest)</span>
+                </button>
+                
+                <button
+                    type="button"
+                    class={`source-option ${source.value.type === 'local' ? 'active' : ''} ${!isLocalAvailable ? 'disabled' : ''}`}
+                    onClick={() => isLocalAvailable && selectSource({ type: 'local' })}
+                    disabled={!isLocalAvailable}
+                    title={!isLocalAvailable ? 'Connect to a local server to use this option' : undefined}
+                >
+                    <Server size={14} />
+                    <span>Local server</span>
+                    {!isLocalAvailable && <span class="unavailable">(not connected)</span>}
                 </button>
                 
                 {/* Commits from yavashark-data */}
@@ -150,6 +167,33 @@ function SourceSelector({
                         </button>
                     ))}
                 </div>
+                
+                {/* Run history */}
+                {history.length > 0 && (
+                    <>
+                        <div class="source-section-label">
+                            <History size={12} />
+                            <span>Run History</span>
+                            <span class="unavailable">(summary only)</span>
+                        </div>
+                        
+                        <div class="run-list">
+                            {history.slice(0, 10).map(run => (
+                                <button
+                                    type="button"
+                                    class={`run-item ${source.value.type === 'run' && source.value.ref === run.id ? 'active' : ''} disabled`}
+                                    key={run.id}
+                                    disabled
+                                    title="Full test results are not stored for historical runs yet"
+                                >
+                                    <span class="run-path">{run.path || 'All tests'}</span>
+                                    <span class="run-stats">{run.passed}/{run.total}</span>
+                                    <span class="run-date">{formatRelativeTime(run.startedAt)}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );
@@ -313,8 +357,8 @@ export function CompareView() {
     }
     
     const canCompare = 
-        (leftSource.value.type === 'current' || leftSource.value.ref) &&
-        (rightSource.value.type === 'current' || rightSource.value.ref);
+        (leftSource.value.type === 'current' || leftSource.value.type === 'local' || leftSource.value.ref) &&
+        (rightSource.value.type === 'current' || rightSource.value.type === 'local' || rightSource.value.ref);
     
     return (
         <div class="CompareView-overlay" onClick={closeCompareModal}>
