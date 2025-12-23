@@ -27,6 +27,7 @@ import {
     buildOutput,
     showBuildOutput,
     getTimingDisplay,
+    openHistoryDetail,
     type TestResult,
     type DiffBaseline,
 } from '#/RerunState';
@@ -66,11 +67,19 @@ function HistoryDropdown({ isOpen }: { isOpen: Signal<boolean> }) {
     
     const handleDelete = async (e: Event, id: string) => {
         e.stopPropagation();
+        e.preventDefault();
         await deleteHistoryRun(id);
     };
     
+    const handleItemClick = (e: Event, entry: typeof history[0]) => {
+        e.stopPropagation();
+        e.preventDefault();
+        isOpen.value = false;
+        openHistoryDetail(entry);
+    };
+    
     return (
-        <div class="history-dropdown">
+        <div class="history-dropdown" onClick={(e) => e.stopPropagation()}>
             <div class="history-dropdown-header">
                 <span>Run History</span>
                 {loading && <RefreshCw size={12} class="spinning" />}
@@ -80,7 +89,12 @@ function HistoryDropdown({ isOpen }: { isOpen: Signal<boolean> }) {
                     <div class="history-empty">No runs yet</div>
                 ) : (
                     history.map(entry => (
-                        <div class="history-dropdown-item" key={entry.id}>
+                        <button
+                            type="button"
+                            class="history-dropdown-item"
+                            key={entry.id}
+                            onClick={(e) => handleItemClick(e, entry)}
+                        >
                             <div class="history-item-main">
                                 <span class="history-path">{entry.path || 'All tests'}</span>
                                 <span class={`history-status ${entry.phase}`}>
@@ -95,15 +109,14 @@ function HistoryDropdown({ isOpen }: { isOpen: Signal<boolean> }) {
                                 {entry.gained > 0 && <span class="gained">+{entry.gained}</span>}
                                 {entry.lost > 0 && <span class="lost">-{entry.lost}</span>}
                             </div>
-                            <button 
-                                type="button" 
+                            <span 
                                 class="delete-btn"
                                 onClick={(e) => handleDelete(e, entry.id)}
                                 title="Delete run"
                             >
                                 <Trash2 size={12} />
-                            </button>
-                        </div>
+                            </span>
+                        </button>
                     ))
                 )}
             </div>

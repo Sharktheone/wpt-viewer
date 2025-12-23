@@ -1,5 +1,6 @@
 import { signal, computed } from '@preact/signals';
 import { activeSource, appConfig } from './Config';
+import { refreshTree } from './State';
 
 export interface RerunConfig {
     path: string;
@@ -48,6 +49,13 @@ export interface DiffStats {
     changedTests: TestResult[];
 }
 
+// Changed test from history
+export interface HistoryChangedTest {
+    path: string;
+    oldStatus: string;
+    newStatus: string;
+}
+
 // Backend run history entry (from /api/history)
 export interface BackendRunHistoryEntry {
     id: string;
@@ -65,6 +73,8 @@ export interface BackendRunHistoryEntry {
     gained: number;
     lost: number;
     baselineRef?: string;
+    changedTests?: HistoryChangedTest[];
+    buildOutput?: string[];
 }
 
 // Git types
@@ -124,6 +134,22 @@ export const timingData = signal<{
 // Backend history (fetched from server)
 export const backendHistory = signal<BackendRunHistoryEntry[]>([]);
 export const historyLoading = signal(false);
+
+// Selected history entry for viewing details
+export const selectedHistoryEntry = signal<BackendRunHistoryEntry | null>(null);
+export const historyDetailOpen = signal(false);
+
+// Open history detail view
+export function openHistoryDetail(entry: BackendRunHistoryEntry) {
+    selectedHistoryEntry.value = entry;
+    historyDetailOpen.value = true;
+}
+
+// Close history detail view
+export function closeHistoryDetail() {
+    historyDetailOpen.value = false;
+    selectedHistoryEntry.value = null;
+}
 
 // Git state - commits from yavashark-data repo
 export const gitCommits = signal<GitCommit[]>([]);
@@ -468,8 +494,11 @@ export function startRerun() {
                     activeRunId = null;
                     eventSource?.close();
                     eventSource = null;
-                    // Refresh history
-                    setTimeout(fetchHistory, 500);
+                    // Refresh history and test tree
+                    setTimeout(() => {
+                        fetchHistory();
+                        refreshTree();
+                    }, 500);
                     break;
                     
                 case 'cancelled':

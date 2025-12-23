@@ -21,6 +21,13 @@ export const settings = {
     testSortMode: signal<TestSortMode>(getTestSortMode()),
 };
 
+// Counter to trigger tree refresh - increment to refetch
+export const treeRefreshCounter = signal(0);
+
+export function refreshTree() {
+    treeRefreshCounter.value++;
+}
+
 effect(() => {
     localStorage.setItem('showTests', settings.showTests.value.toString());
 });

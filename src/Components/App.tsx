@@ -15,9 +15,10 @@ import { ShortStatus, type ShortStatusType } from '#/Wpt/Status.ts';
 import { NotFound } from './NotFound.tsx';
 import { globalPath, page } from '#/Routing.tsx';
 import { Settings } from './Pages/Settings.tsx';
-import { settings, activeSource, initializeSource } from '#/State.tsx';
+import { settings, activeSource, initializeSource, treeRefreshCounter } from '#/State.tsx';
 import { RerunModal } from './RerunModal.tsx';
 import { CompareView } from './CompareView.tsx';
+import { HistoryDetailView } from './HistoryDetailView.tsx';
 
 function createSignalStatusMap() {
     const entries = ShortStatus.map(s => [s, useSignal(false)]);
@@ -85,6 +86,7 @@ export function App() {
 
     useSignalEffect(() => {
         const currentFyi = fyi.value;
+        void treeRefreshCounter.value;
         tree.value = null;
 
         currentFyi.getTree().then(t => {
@@ -113,5 +115,6 @@ export function App() {
 
         <RerunModal />
         <CompareView />
+        <HistoryDetailView />
     </div>
 }
