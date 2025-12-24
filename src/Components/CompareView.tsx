@@ -4,6 +4,7 @@ import { X, GitCompare, RefreshCw, ChevronDown, ChevronUp, TrendingUp, TrendingD
 import { useSignal, type Signal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import { Button } from './Ui/Button';
+import { TestPathLink } from './TestPathLink';
 import {
     compareModalOpen,
     leftSource,
@@ -39,22 +40,6 @@ function formatRelativeTime(dateStr: string): string {
     if (diffHour < 24) return `${diffHour}h ago`;
     if (diffDay < 30) return `${diffDay}d ago`;
     return date.toLocaleDateString();
-}
-
-// Strip common path prefixes
-function stripPathPrefix(path: string): string {
-    const prefixes = [
-        '../../test262/test/',
-        '../test262/test/',
-        'test262/test/',
-        'test/',
-    ];
-    for (const prefix of prefixes) {
-        if (path.startsWith(prefix)) {
-            return path.slice(prefix.length);
-        }
-    }
-    return path;
 }
 
 // Source selector dropdown component
@@ -325,9 +310,12 @@ function TransitionGroupSection({ group, expandedGroups }: {
             {isExpanded && (
                 <div class="transition-tests">
                     {group.tests.map(test => (
-                        <div class="test-path" key={test.path}>
-                            {stripPathPrefix(test.path)}
-                        </div>
+                        <TestPathLink 
+                            key={test.path}
+                            path={test.path}
+                            status={test.rightStatus}
+                            variant="compact"
+                        />
                     ))}
                 </div>
             )}

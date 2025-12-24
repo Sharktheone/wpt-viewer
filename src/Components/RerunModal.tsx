@@ -5,6 +5,7 @@ import { useComputed, useSignal, type Signal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import { Button } from './Ui/Button';
 import { Select } from './Ui/Select';
+import { TestPathLink } from './TestPathLink';
 import {
     rerunModalOpen,
     rerunConfig,
@@ -248,22 +249,6 @@ function getBaselineLabel(baseline: DiffBaseline): string {
     }
 }
 
-// Strip common path prefixes for cleaner display
-function stripPathPrefix(path: string): string {
-    const prefixes = [
-        '../../test262/test/',
-        '../test262/test/',
-        'test262/test/',
-        'test/',
-    ];
-    for (const prefix of prefixes) {
-        if (path.startsWith(prefix)) {
-            return path.slice(prefix.length);
-        }
-    }
-    return path;
-}
-
 interface TransitionGroup {
     from: string;
     to: string;
@@ -299,9 +284,13 @@ function TransitionGroupSection({ group, expandedGroups }: { group: TransitionGr
             {isExpanded && (
                 <div class="transition-tests">
                     {group.tests.map(test => (
-                        <div class="test-path" key={test.path}>
-                            {stripPathPrefix(test.path)}
-                        </div>
+                        <TestPathLink 
+                            key={test.path}
+                            path={test.path} 
+                            status={test.status}
+                            message={test.message}
+                            variant="compact"
+                        />
                     ))}
                 </div>
             )}
@@ -708,7 +697,12 @@ export function RerunModal() {
                                     {recentResults.value.map(result => (
                                         <div class={`result-item ${result.status.toLowerCase()}`} key={result.path}>
                                             <span class={`status-badge ${result.status.toLowerCase()}`}>{result.status}</span>
-                                            <span class="path">{stripPathPrefix(result.path)}</span>
+                                            <TestPathLink 
+                                                path={result.path}
+                                                status={result.status}
+                                                message={result.message}
+                                                variant="inline"
+                                            />
                                         </div>
                                     ))}
                                 </div>

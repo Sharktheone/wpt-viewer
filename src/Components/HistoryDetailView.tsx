@@ -12,6 +12,7 @@ import {
     type BackendRunHistoryEntry,
     type HistoryChangedTest,
 } from '#/RerunState';
+import { TestPathLink } from './TestPathLink';
 
 // Format date for display
 function formatDate(dateStr: string): string {
@@ -58,22 +59,6 @@ function getPhaseText(phase: string): string {
         case 'building': return 'Building';
         default: return phase;
     }
-}
-
-// Strip common path prefixes for cleaner display
-function stripPathPrefix(path: string): string {
-    const prefixes = [
-        '../../test262/test/',
-        '../test262/test/',
-        'test262/test/',
-        'test/',
-    ];
-    for (const prefix of prefixes) {
-        if (path.startsWith(prefix)) {
-            return path.slice(prefix.length);
-        }
-    }
-    return path;
 }
 
 // Group changed tests by transition type
@@ -140,9 +125,12 @@ function TransitionGroupItem({ group, expandedGroups }: {
             {isExpanded && (
                 <div class="transition-tests">
                     {group.tests.map(test => (
-                        <div class="test-path" key={test.path}>
-                            {stripPathPrefix(test.path)}
-                        </div>
+                        <TestPathLink 
+                            key={test.path}
+                            path={test.path}
+                            status={test.newStatus}
+                            variant="compact"
+                        />
                     ))}
                 </div>
             )}

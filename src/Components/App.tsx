@@ -19,6 +19,7 @@ import { settings, activeSource, initializeSource, treeRefreshCounter } from '#/
 import { RerunModal } from './RerunModal.tsx';
 import { CompareView } from './CompareView.tsx';
 import { HistoryDetailView } from './HistoryDetailView.tsx';
+import { TestOutputModal } from './TestOutputModal.tsx';
 
 function createSignalStatusMap() {
     const entries = ShortStatus.map(s => [s, useSignal(false)]);
@@ -116,5 +117,6 @@ export function App() {
         <RerunModal />
         <CompareView />
         <HistoryDetailView />
+        <TestOutputModal />
     </div>
 }
