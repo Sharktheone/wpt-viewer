@@ -1,0 +1,151 @@
+@use '../base/common.scss';
+
+.TestOutputModal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200; // Higher than other modals
+    backdrop-filter: blur(4px);
+}
+
+.TestOutputModal {
+    background: common.$color-background;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+
+    .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        flex-shrink: 0;
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+
+            &.pass { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+            &.fail { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+            &.crash { background: rgba(249, 115, 22, 0.2); color: #f97316; }
+            &.timeout { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+            &.skip { background: rgba(156, 163, 175, 0.2); color: #9ca3af; }
+        }
+
+        .close-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            background: none;
+            border: none;
+            border-radius: 6px;
+            color: inherit;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 150ms, background 150ms;
+
+            &:hover {
+                opacity: 1;
+                background: rgba(255, 255, 255, 0.1);
+            }
+        }
+    }
+
+    .modal-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .modal-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        padding: 1rem 1.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        flex-shrink: 0;
+
+        .github-link {
+            text-decoration: none;
+        }
+
+        .Button {
+            height: 36px;
+            box-sizing: border-box;
+        }
+    }
+}
+
+.test-path-section {
+    .test-path {
+        display: block;
+        padding: 0.75rem 1rem;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 6px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.8rem;
+        word-break: break-all;
+        user-select: all;
+    }
+}
+
+.output-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    header {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .output-content {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 6px;
+        padding: 1rem;
+        max-height: 400px;
+        overflow-y: auto;
+
+        .no-output {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        // Override Code component styles for better fit
+        .Code {
+            background: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.75rem;
+        }
+    }
+}
