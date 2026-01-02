@@ -113,6 +113,29 @@ interface Test262FyiNode {
     files?: Record<string, Test262FyiNode>;
 }
 
+// ===== LibJS Provider Types =====
+type LibJSResult = 'PASSED' | 'FAILED' | 'SKIPPED' | 'TIMEOUT' | 'PROCESS_ERROR' | 'RUNNER_EXCEPTION' | 'TODO_ERROR' | 'METADATA_ERROR' | 'HARNESS_ERROR';
+
+interface LibJSPerFileData {
+    duration: number;
+    results: Record<string, LibJSResult>;
+}
+
+function libJSResultToShortStatus(result: LibJSResult): ShortStatusType {
+    switch (result) {
+        case 'PASSED': return 'P';
+        case 'FAILED': return 'F';
+        case 'SKIPPED': return 'S';
+        case 'TIMEOUT': return 'T';
+        case 'PROCESS_ERROR': return 'C';
+        case 'RUNNER_EXCEPTION': return 'C';
+        case 'HARNESS_ERROR': return 'C';
+        case 'METADATA_ERROR': return 'F';
+        case 'TODO_ERROR': return 'F';
+        default: return 'F';
+    }
+}
+
 // Cache for test262.fyi JSON files to avoid refetching on engine change
 const test262FyiCache = new Map<string, Test262FyiNode>();
 
@@ -238,6 +261,9 @@ export class Fyi {
             case 'test262fyi':
                 return await this.#fetchTest262FyiResults();
             
+            case 'libjs':
+                return await this.#fetchLibJSResults();
+            
             default:
                 throw new Error(`Unknown source type: ${this.#source.type}`);
         }
@@ -272,6 +298,35 @@ export class Fyi {
             // Clear progress when done
             loadingProgress.value = null;
         }
+    }
+
+    async #fetchLibJSResults(): Promise<CompactTestEntry[]> {
+        const url = `${this.#source.baseUrl}/per-file-master.json`;
+        
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch LibJS results: ${response.status}`);
+        }
+        
+        const data: LibJSPerFileData = await response.json();
+        const results: CompactTestEntry[] = [];
+        
+        // Data structure: { duration: number, results: { "test/path.js": "PASSED", ... } }
+        for (const [path, status] of Object.entries(data.results)) {
+            // Paths in LibJS data include the test/ prefix, strip it
+            // and ensure .js extension is preserved
+            let testPath = path;
+            if (testPath.startsWith('test/')) {
+                testPath = testPath.slice('test/'.length);
+            }
+            
+            results.push({
+                p: testPath,
+                s: libJSResultToShortStatus(status),
+            });
+        }
+        
+        return results;
     }
 
     async getTestDetails(path: string): Promise<FullEntry> {
@@ -310,6 +365,14 @@ export class Fyi {
                 data = { 
                     status: 'UNKNOWN', 
                     msg: 'Individual test details are not available for test262.fyi (aggregate data only)' 
+                };
+                break;
+            
+            case 'libjs':
+                // LibJS doesn't provide individual test details beyond pass/fail
+                data = { 
+                    status: 'UNKNOWN', 
+                    msg: 'Individual test details are not available for LibJS data source' 
                 };
                 break;
         }

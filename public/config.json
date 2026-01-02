@@ -24,6 +24,12 @@
       "type": "test262fyi",
       "baseUrl": "https://data.test262.fyi",
       "description": "Aggregate test262 results from multiple JS engines"
+    },
+    "libjs": {
+      "name": "LibJS (test262)",
+      "type": "libjs",
+      "baseUrl": "https://raw.githubusercontent.com/LadybirdBrowser/libjs-data/refs/heads/master/test262",
+      "description": "Test262 results from LibJS (Ladybird)"
     }
   },
   "defaultProfile": "rfast"

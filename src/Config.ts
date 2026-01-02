@@ -1,6 +1,6 @@
 import { signal, computed } from '@preact/signals';
 
-export type DataSourceType = 'github' | 'local' | 'boa' | 'test262fyi';
+export type DataSourceType = 'github' | 'local' | 'boa' | 'test262fyi' | 'libjs';
 
 export interface LoadingProgress {
     fetched: number;
@@ -109,6 +109,12 @@ function getDefaultConfig(): AppConfig {
                 description: 'Aggregate test262 results from multiple JS engines',
                 engine: getSavedProviderOptions('test262fyi').engine || 'v8',
             },
+            libjs: {
+                name: 'LibJS (test262)',
+                type: 'libjs',
+                baseUrl: 'https://raw.githubusercontent.com/LadybirdBrowser/libjs-data/refs/heads/master/test262',
+                description: 'Test262 results from LibJS (Ladybird)',
+            },
         },
         defaultProfile: localStorage.getItem('defaultProfile') || 'fast',
     };
@@ -214,6 +220,14 @@ export async function loadConfig(): Promise<AppConfig> {
                 baseUrl: 'https://data.test262.fyi',
                 description: 'Aggregate test262 results from multiple JS engines',
                 engine: getSavedProviderOptions('test262fyi').engine || 'v8',
+            };
+        }
+        if (!config.sources.libjs) {
+            config.sources.libjs = {
+                name: 'LibJS (test262)',
+                type: 'libjs',
+                baseUrl: 'https://raw.githubusercontent.com/LadybirdBrowser/libjs-data/refs/heads/master/test262',
+                description: 'Test262 results from LibJS (Ladybird)',
             };
         }
 

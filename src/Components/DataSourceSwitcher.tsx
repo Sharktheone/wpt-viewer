@@ -1,6 +1,6 @@
 import '#/Style/components/DataSourceSwitcher.scss';
 
-import { Database, Server, Github, RefreshCw, Cloud, GitBranch } from 'lucide-preact';
+import { Database, Server, Github, RefreshCw, Cloud, GitBranch, Bug } from 'lucide-preact';
 import { useComputed, useSignal, useSignalEffect } from '@preact/signals';
 import { Select } from './Ui/Select';
 import {
@@ -79,6 +79,8 @@ export function DataSourceSwitcher() {
                 return <Github size={18} />;
             case 'test262fyi':
                 return <Cloud size={18} />;
+            case 'libjs':
+                return <Bug size={18} />;
             default:
                 return <Database size={18} />;
         }
