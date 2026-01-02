@@ -18,12 +18,18 @@
         }
     }
 
-    .source-select {
+    .source-select,
+    .engine-select,
+    .ref-select {
         select {
-            min-width: 8rem;
-            padding: 0.25rem 0.5rem;
-            font-size: 0.875rem;
+            min-width: 6rem;
+            padding: 0.2rem 1.5rem 0.2rem 0.4rem;
+            font-size: 0.8rem;
         }
+    }
+
+    .source-select select {
+        min-width: 8rem;
     }
 
     .engine-selector,
@@ -36,21 +42,6 @@
             width: 14px;
             height: 14px;
             opacity: 0.7;
-        }
-        
-        select {
-            min-width: 6rem;
-            padding: 0.2rem 0.4rem;
-            font-size: 0.8rem;
-        }
-    }
-
-    .engine-select,
-    .ref-select {
-        select {
-            min-width: 6rem;
-            padding: 0.2rem 0.4rem;
-            font-size: 0.8rem;
         }
     }
 
