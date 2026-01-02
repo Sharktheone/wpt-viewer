@@ -71,7 +71,7 @@ interface BoaLatestJson {
 
 function boaResultToShortStatus(result: BoaResultCode): ShortStatusType {
     switch (result) {
-        case 'O': return 'O';  // OK -> OK
+        case 'O': return 'P';  // Ok -> Pass
         case 'F': return 'F';  // Fail -> Fail
         case 'I': return 'S';  // Ignored -> Skip
         case 'P': return 'C';  // Panic -> Crash
