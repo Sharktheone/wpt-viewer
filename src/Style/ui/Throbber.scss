@@ -7,9 +7,16 @@
 }
 
 .Throbber {
-    display: inline-flex;
-    gap: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
     margin-top: 16px;
+
+    .dots {
+        display: inline-flex;
+        gap: 8px;
+    }
 
     .dot {
         display: inline-flex;
@@ -19,11 +26,39 @@
         animation: Throbber_blink 1000ms ease infinite;
     }
 
-    > .dot:nth-child(2) {
+    .dot:nth-child(2) {
         animation-delay: 166ms;
     }
 
-    > .dot:nth-child(3) {
+    .dot:nth-child(3) {
         animation-delay: 333ms;
+    }
+
+    .progress-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        width: 200px;
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: common.$color-primary;
+        transition: width 150ms ease-out;
+        border-radius: 3px;
+    }
+
+    .progress-text {
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.6);
     }
 }

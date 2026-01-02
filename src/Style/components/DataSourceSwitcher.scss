@@ -26,6 +26,34 @@
         }
     }
 
+    .engine-selector,
+    .ref-selector {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        
+        svg {
+            width: 14px;
+            height: 14px;
+            opacity: 0.7;
+        }
+        
+        select {
+            min-width: 6rem;
+            padding: 0.2rem 0.4rem;
+            font-size: 0.8rem;
+        }
+    }
+
+    .engine-select,
+    .ref-select {
+        select {
+            min-width: 6rem;
+            padding: 0.2rem 0.4rem;
+            font-size: 0.8rem;
+        }
+    }
+
     .mode-badge {
         font-size: 0.6rem;
         padding: 0.15rem 0.35rem;

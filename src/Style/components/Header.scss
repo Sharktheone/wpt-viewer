@@ -5,10 +5,19 @@
     align-items: center;
     width: 100%;
     justify-content: space-between;
+    gap: 1rem;
+
+    .header-right {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-shrink: 0;
+    }
 
     .links {
         display: flex;
-        gap: 12px;
+        align-items: center;
+        gap: 8px;
     }
 
     .links label {
@@ -19,10 +28,6 @@
     .commit-hash {
         width: 12rem;
     }
-
-    //.links label select {
-    //    margin: auto 0;
-    //}
 
     .links a,
     .links .header-btn {

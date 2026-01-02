@@ -21,36 +21,38 @@ export function Header() {
     return <header class='Header'>
         <Breadcrumbs signal={globalPath} />
 
-        <div class='links'>
-            {backToWptLink}
-
-            <button
-                type="button"
-                class='unstyled header-btn'
-                title='Compare Results'
-                onClick={openCompareModal}
-            >
-                <GitCompare size={24} aria-hidden />
-            </button>
-
+        <div class='header-right'>
             <DataSourceSwitcher />
 
-            <a
-                href='#/settings'
-                class='unstyled'
-                title='Settings'>
-                <Settings size={24} aria-hidden />
-            </a>
+            <div class='links'>
+                {backToWptLink}
 
-            <a
-                href='https://github.com/Sharktheone/yavashark'
-                target='_blank'
-                class='unstyled'
-                title='View the source code on GitHub'
-                tabIndex={-1}
-                rel='noreferrer'>
-                <Github size={24} aria-hidden />
-            </a>
+                <button
+                    type="button"
+                    class='unstyled header-btn'
+                    title='Compare Results'
+                    onClick={openCompareModal}
+                >
+                    <GitCompare size={24} aria-hidden />
+                </button>
+
+                <a
+                    href='#/settings'
+                    class='unstyled'
+                    title='Settings'>
+                    <Settings size={24} aria-hidden />
+                </a>
+
+                <a
+                    href='https://github.com/Sharktheone/yavashark'
+                    target='_blank'
+                    class='unstyled'
+                    title='View the source code on GitHub'
+                    tabIndex={-1}
+                    rel='noreferrer'>
+                    <Github size={24} aria-hidden />
+                </a>
+            </div>
         </div>
     </header>
 }

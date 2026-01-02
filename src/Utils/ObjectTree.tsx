@@ -1,3 +1,15 @@
+// Check if a value is a tree directory node (not a leaf entry like PartialEntry)
+function isTreeNode(value: unknown): boolean {
+    if (value === null || typeof value !== 'object') {
+        return false;
+    }
+    // PartialEntry has a 'status' property and 'path' property
+    // Tree directory nodes are plain objects created with Object.create(null)
+    // We check if it has the constructor property pointing to Object or has no prototype
+    const proto = Object.getPrototypeOf(value);
+    return proto === null || proto === Object.prototype;
+}
+
 export function followDeep(obj: object, path: string[]) {
     let head = obj;
 
@@ -8,7 +20,13 @@ export function followDeep(obj: object, path: string[]) {
         }
 
         // @ts-ignore
-        head = head[level];
+        const next = head[level];
+        // If we hit a non-tree-node (like a PartialEntry) but there are more path segments,
+        // the path doesn't exist in the tree structure
+        if (!isTreeNode(next)) {
+            return;
+        }
+        head = next;
     }
 
     return head;
@@ -21,7 +39,20 @@ export function setDeep(obj: object, path: string[], value: any) {
         const level = ref[i];
         if (level in head) {
             // @ts-ignore
-            head = head[level];
+            const existing = head[level];
+            if (isTreeNode(existing)) {
+                // It's a directory node, continue traversing
+                head = existing;
+            } else {
+                // Existing value is a leaf entry (like PartialEntry)
+                // This means there's a conflict - a file path that's also used as a directory
+                // Replace with a new directory node (the leaf entry will be lost)
+                // @ts-ignore
+                const newNode = Object.create(null);
+                // @ts-ignore
+                head[level] = newNode;
+                head = newNode;
+            }
             continue;
         }
 
@@ -29,8 +60,18 @@ export function setDeep(obj: object, path: string[], value: any) {
         head = head[level] = Object.create(null);
     }
 
+    const lastKey = path.at(-1);
     // @ts-ignore
-    head[path.at(-1)] = value;
+    const existingValue = head[lastKey];
+    if (isTreeNode(existingValue)) {
+        // There's already a directory at this location - this is a conflict
+        // where a path is both a file and a directory prefix
+        // Skip setting this value to preserve the directory structure
+        return value;
+    }
+
+    // @ts-ignore
+    head[lastKey] = value;
 
     return value;
 };

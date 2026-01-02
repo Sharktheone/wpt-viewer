@@ -9,9 +9,10 @@ export interface SelectAttributes {
     children: ComponentChildren;
     onInput?: (e: InputEvent) => void;
     className?: string;
+    disabled?: boolean;
 }
 
-export function Select({ signal, value, children, onInput, className }: SelectAttributes) {
+export function Select({ signal, value, children, onInput, className, disabled }: SelectAttributes) {
     function handleInput(e: InputEvent) {
         if (signal) {
             const target = e.target as HTMLSelectElement;
@@ -22,8 +23,8 @@ export function Select({ signal, value, children, onInput, className }: SelectAt
 
     const selectValue = signal ?? value;
 
-    return <div class={`Select${className ? ` ${className}` : ''}`}>
-        <select onInput={handleInput} value={selectValue}>
+    return <div class={`Select${className ? ` ${className}` : ''}${disabled ? ' disabled' : ''}`}>
+        <select onInput={handleInput} value={selectValue} disabled={disabled}>
             {children}
         </select>
         <div class='chevron' aria-hidden>▾</div>

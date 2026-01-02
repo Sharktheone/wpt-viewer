@@ -90,9 +90,13 @@ export function App() {
         void treeRefreshCounter.value;
         tree.value = null;
 
-        currentFyi.getTree().then(t => {
-            tree.value = t;
-        });
+        currentFyi.getTree()
+            .then(t => {
+                tree.value = t;
+            })
+            .catch(err => {
+                console.error('Failed to load tree:', err);
+            });
 
         initializeSource();
     });

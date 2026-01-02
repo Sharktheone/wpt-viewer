@@ -1,10 +1,22 @@
 import { signal, computed } from '@preact/signals';
 
+export type DataSourceType = 'github' | 'local' | 'boa' | 'test262fyi';
+
+export interface LoadingProgress {
+    fetched: number;
+    total: number;
+    phase: 'discovering' | 'fetching';
+}
+
 export interface DataSourceConfig {
     name: string;
-    type: 'github' | 'local';
+    type: DataSourceType;
     baseUrl: string;
     description: string;
+    /** For test262fyi: the selected engine */
+    engine?: string;
+    /** For boa: the selected ref (branch/tag) */
+    ref?: string;
 }
 
 export interface AppConfig {
@@ -35,9 +47,35 @@ export interface ProfilesConfig {
     profiles: Record<string, Profile>;
 }
 
+// Provider-specific options
+export interface ProviderOptions {
+    /** For test262fyi: which engine to use */
+    engine?: string;
+    /** For boa: which ref (branch or tag) to use */
+    ref?: string;
+}
+
 // Get saved local URL from localStorage
 function getSavedLocalUrl(): string {
     return localStorage.getItem('localServerUrl') || 'http://localhost:1215';
+}
+
+// Get saved provider options from localStorage
+function getSavedProviderOptions(sourceKey: string): ProviderOptions {
+    const saved = localStorage.getItem(`providerOptions:${sourceKey}`);
+    if (saved) {
+        try {
+            return JSON.parse(saved);
+        } catch {
+            return {};
+        }
+    }
+    return {};
+}
+
+// Save provider options to localStorage
+export function saveProviderOptions(sourceKey: string, options: ProviderOptions): void {
+    localStorage.setItem(`providerOptions:${sourceKey}`, JSON.stringify(options));
 }
 
 // Default config
@@ -46,17 +84,31 @@ function getDefaultConfig(): AppConfig {
         defaultSource: 'github',
         sources: {
             github: {
-                name: 'GitHub',
+                name: 'GitHub (Yavashark)',
                 type: 'github',
                 baseUrl: 'https://raw.githubusercontent.com/Sharktheone/yavashark-data',
-                description: 'Read-only results from GitHub',
+                description: 'Read-only WPT results from Yavashark',
             },
             local: {
                 name: 'Local Server',
                 type: 'local',
                 baseUrl: getSavedLocalUrl(),
                 description: 'Local development server with rerun capabilities',
-            }
+            },
+            boa: {
+                name: 'Boa (test262)',
+                type: 'boa',
+                baseUrl: 'https://raw.githubusercontent.com/boa-dev/data/main/test262',
+                description: 'Test262 results from the Boa JavaScript engine',
+                ...getSavedProviderOptions('boa'),
+            },
+            test262fyi: {
+                name: 'test262.fyi',
+                type: 'test262fyi',
+                baseUrl: 'https://data.test262.fyi',
+                description: 'Aggregate test262 results from multiple JS engines',
+                engine: getSavedProviderOptions('test262fyi').engine || 'v8',
+            },
         },
         defaultProfile: localStorage.getItem('defaultProfile') || 'fast',
     };
@@ -69,6 +121,24 @@ export const appConfig = signal<AppConfig>(getDefaultConfig());
 export const activeSourceKey = signal<string>(
     localStorage.getItem('dataSource') || 'github'
 );
+
+// Provider-specific options signals
+export const selectedEngine = signal<string>(
+    localStorage.getItem('test262fyi:engine') || 'v8'
+);
+
+export const selectedRef = signal<string>(
+    localStorage.getItem('boa:ref') || 'heads/main'
+);
+
+// Available engines for test262fyi (loaded dynamically)
+export const availableEngines = signal<Record<string, string>>({});
+
+// Available refs for boa (loaded dynamically)
+export const availableRefs = signal<string[]>(['heads/main']);
+
+// Loading progress for long-running fetches (e.g., test262.fyi)
+export const loadingProgress = signal<LoadingProgress | null>(null);
 
 // Capabilities of the active source
 export const capabilities = signal<Capabilities>({
@@ -106,13 +176,13 @@ export async function loadConfig(): Promise<AppConfig> {
         }
         const config: AppConfig = await response.json();
 
-        // Ensure we always have both sources
+        // Ensure we always have the core sources
         if (!config.sources.github) {
             config.sources.github = {
-                name: 'GitHub',
+                name: 'GitHub (Yavashark)',
                 type: 'github',
                 baseUrl: 'https://raw.githubusercontent.com/Sharktheone/yavashark-data',
-                description: 'Read-only results from GitHub',
+                description: 'Read-only WPT results from Yavashark',
             };
         }
         if (!config.sources.local) {
@@ -125,6 +195,26 @@ export async function loadConfig(): Promise<AppConfig> {
         } else {
             // Override local URL with saved value
             config.sources.local.baseUrl = savedLocalUrl;
+        }
+        
+        // Add new data providers if not present
+        if (!config.sources.boa) {
+            config.sources.boa = {
+                name: 'Boa (test262)',
+                type: 'boa',
+                baseUrl: 'https://raw.githubusercontent.com/boa-dev/data/main/test262',
+                description: 'Test262 results from the Boa JavaScript engine',
+                ...getSavedProviderOptions('boa'),
+            };
+        }
+        if (!config.sources.test262fyi) {
+            config.sources.test262fyi = {
+                name: 'test262.fyi',
+                type: 'test262fyi',
+                baseUrl: 'https://data.test262.fyi',
+                description: 'Aggregate test262 results from multiple JS engines',
+                engine: getSavedProviderOptions('test262fyi').engine || 'v8',
+            };
         }
 
         if (savedDefaultProfile) {
@@ -162,6 +252,32 @@ export function setActiveSource(key: string): void {
         canRebuild: false,
         profiles: [],
     };
+}
+
+// Set the selected engine for test262fyi
+export function setSelectedEngine(engine: string): void {
+    selectedEngine.value = engine;
+    localStorage.setItem('test262fyi:engine', engine);
+    
+    // Update the source config
+    const config = appConfig.value;
+    if (config.sources.test262fyi) {
+        config.sources.test262fyi.engine = engine;
+        appConfig.value = { ...config };
+    }
+}
+
+// Set the selected ref for boa
+export function setSelectedRef(ref: string): void {
+    selectedRef.value = ref;
+    localStorage.setItem('boa:ref', ref);
+    
+    // Update the source config
+    const config = appConfig.value;
+    if (config.sources.boa) {
+        config.sources.boa.ref = ref;
+        appConfig.value = { ...config };
+    }
 }
 
 // Check capabilities of a data source

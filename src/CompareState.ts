@@ -1,5 +1,5 @@
 import { signal, computed } from '@preact/signals';
-import { activeSource } from './Config';
+import { activeSource, selectedEngine, selectedRef } from './Config';
 import { backendHistory, fetchHistory, type BackendRunHistoryEntry } from './RerunState';
 
 // GitHub constants for yavashark-data repo
@@ -7,6 +7,12 @@ const DATA_REPO_OWNER = 'Sharktheone';
 const DATA_REPO_NAME = 'yavashark-data';
 const GITHUB_API_BASE = 'https://api.github.com';
 const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com';
+
+// Boa constants
+const BOA_DATA_BASE = 'https://raw.githubusercontent.com/boa-dev/data/main/test262';
+
+// test262.fyi constants
+const TEST262FYI_BASE = 'https://test262-fyi.github.io/data';
 
 // Types
 export interface GitCommit {
@@ -18,8 +24,8 @@ export interface GitCommit {
 }
 
 export interface CompareSource {
-    type: 'commit' | 'run' | 'current' | 'local';
-    ref?: string;        // commit hash or run ID
+    type: 'commit' | 'run' | 'current' | 'local' | 'boa' | 'test262fyi';
+    ref?: string;        // commit hash, run ID, boa ref, or engine name
     label?: string;      // display label
 }
 
@@ -200,7 +206,7 @@ function normalizeStatus(status: string | number): string {
 async function fetchCurrentResults(): Promise<Map<string, string>> {
     const source = activeSource.value;
     
-    // Try local server
+    // Handle based on source type
     if (source?.type === 'local') {
         try {
             const res = await fetch(`${source.baseUrl}/api/current`);
@@ -219,6 +225,16 @@ async function fetchCurrentResults(): Promise<Map<string, string>> {
         } catch {
             // Fall through
         }
+    }
+    
+    // Handle Boa source
+    if (source?.type === 'boa') {
+        return fetchBoaResults(source.ref || selectedRef.value);
+    }
+    
+    // Handle test262.fyi source
+    if (source?.type === 'test262fyi') {
+        return fetchTest262FyiResults(source.engine || selectedEngine.value);
     }
     
     // For GitHub/static site, fetch from latest commit
@@ -240,6 +256,10 @@ async function fetchResultsForSource(source: CompareSource): Promise<Map<string,
             return fetchCurrentResults();
         case 'local':
             return fetchLocalResults();
+        case 'boa':
+            return fetchBoaResults(source.ref);
+        case 'test262fyi':
+            return fetchTest262FyiResults(source.ref);
         case 'run':
             throw new Error('Run history comparison is not yet supported. Run results need to be stored separately.');
         default:
@@ -269,6 +289,134 @@ async function fetchLocalResults(): Promise<Map<string, string>> {
         }
     }
     return map;
+}
+
+// ===== Boa Data Provider =====
+
+type BoaResultCode = 'O' | 'F' | 'I' | 'P';
+
+interface BoaTestNode {
+    n: string;
+    v?: number;
+    r?: BoaResultCode;
+    a?: { t: number; o: number; i: number; p: number };
+    s?: BoaTestNode[];
+    t?: BoaTestNode[];
+}
+
+interface BoaLatestJson {
+    c: string;
+    u: string;
+    r: BoaTestNode;
+}
+
+function boaResultToStatus(result: BoaResultCode): string {
+    switch (result) {
+        case 'O': return 'PASS';
+        case 'F': return 'FAIL';
+        case 'I': return 'SKIP';
+        case 'P': return 'CRASH';
+        default: return 'FAIL';
+    }
+}
+
+function flattenBoaTestsForCompare(node: BoaTestNode, pathParts: string[] = []): Map<string, string> {
+    const results = new Map<string, string>();
+    
+    if (node.t) {
+        for (const test of node.t) {
+            const testPath = [...pathParts, test.n].join('/');
+            if (test.r !== undefined) {
+                results.set(testPath, boaResultToStatus(test.r));
+            }
+        }
+    }
+    
+    if (node.s) {
+        for (const subdir of node.s) {
+            const subdirPath = [...pathParts, subdir.n];
+            const subdirResults = flattenBoaTestsForCompare(subdir, subdirPath);
+            for (const [path, status] of subdirResults) {
+                results.set(path, status);
+            }
+        }
+    }
+    
+    return results;
+}
+
+async function fetchBoaResults(ref?: string): Promise<Map<string, string>> {
+    const boaRef = ref || selectedRef.value || 'heads/main';
+    const url = `${BOA_DATA_BASE}/refs/${boaRef}/latest.json`;
+    
+    const res = await fetch(url);
+    if (!res.ok) {
+        throw new Error(`Failed to fetch Boa results: ${res.status}`);
+    }
+    
+    const data: BoaLatestJson = await res.json();
+    return flattenBoaTestsForCompare(data.r, []);
+}
+
+// ===== test262.fyi Data Provider =====
+
+interface Test262FyiIndex {
+    total: number;
+    engines: Record<string, number>;
+    files: Record<string, Test262FyiCategory>;
+}
+
+interface Test262FyiCategory {
+    total: number;
+    engines: Record<string, number>;
+    files?: Record<string, Test262FyiCategory>;
+}
+
+function flattenTest262FyiForCompare(
+    data: Test262FyiIndex,
+    engine: string
+): Map<string, string> {
+    const results = new Map<string, string>();
+    
+    function processCategory(category: Test262FyiCategory, path: string[]): void {
+        const passed = category.engines[engine] || 0;
+        const total = category.total;
+        const failed = total - passed;
+        const categoryPath = path.join('/');
+        
+        if (category.files && Object.keys(category.files).length > 0) {
+            for (const [name, subCategory] of Object.entries(category.files)) {
+                processCategory(subCategory, [...path, name]);
+            }
+        } else {
+            // Leaf category - create pass/fail entries
+            for (let i = 0; i < passed; i++) {
+                results.set(`${categoryPath}/pass_${String(i + 1).padStart(5, '0')}`, 'PASS');
+            }
+            for (let i = 0; i < failed; i++) {
+                results.set(`${categoryPath}/fail_${String(i + 1).padStart(5, '0')}`, 'FAIL');
+            }
+        }
+    }
+    
+    for (const [name, category] of Object.entries(data.files)) {
+        processCategory(category, [name]);
+    }
+    
+    return results;
+}
+
+async function fetchTest262FyiResults(engine?: string): Promise<Map<string, string>> {
+    const selectedEngineName = engine || selectedEngine.value || 'v8';
+    const url = `${TEST262FYI_BASE}/index.json`;
+    
+    const res = await fetch(url);
+    if (!res.ok) {
+        throw new Error(`Failed to fetch test262.fyi results: ${res.status}`);
+    }
+    
+    const data: Test262FyiIndex = await res.json();
+    return flattenTest262FyiForCompare(data, selectedEngineName);
 }
 
 // Calculate status counts from results
@@ -414,6 +562,10 @@ export function getSourceLabel(source: CompareSource): string {
             return source.label || (source.ref ? `Commit ${source.ref.slice(0, 7)}` : 'Select commit...');
         case 'run':
             return source.label || (source.ref ? `Run ${source.ref.slice(0, 8)}` : 'Select run...');
+        case 'boa':
+            return source.label || (source.ref ? `Boa (${source.ref.replace('heads/', '').replace('tags/', '')})` : 'Boa (main)');
+        case 'test262fyi':
+            return source.label || (source.ref ? `test262.fyi (${source.ref})` : 'test262.fyi');
         default:
             return 'Unknown';
     }

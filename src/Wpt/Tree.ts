@@ -119,24 +119,21 @@ export class Tree {
 
     tree: EntryTree;
 
-    constructor(fyi: Fyi, flat: Test262Entry) {
+    constructor(fyi: Fyi, flat: Test262Entry[]) {
         const start = window.performance.now();
 
         // create the tree from the flat map
         const tree = Object.create(null);
-        for (let [_, value] of Object.entries(flat)) {
-            // remove leading slash
-            // key = key.slice(1);
+        for (const entry of flat) {
+            const key = entry.p;
 
-            const key = value.p;
-
-            // some status values are wrong, we need to fix them
-            value = Tree.recomputeTestEntry(value);
-            const status = value.s;
-            const [passedTests, totalTests] = value.c;
+            // Compute pass status from the entry
+            const computed = Tree.recomputeTestEntry(entry);
+            const status = computed.s;
+            const [passedTests, totalTests] = computed.c;
 
             // makes things easier to work with
-            const entry = new PartialEntry(
+            const partialEntry = new PartialEntry(
                 fyi,
                 key,
                 {
@@ -148,7 +145,7 @@ export class Tree {
 
             // created a nested key
             const path = key.split('/');
-            setDeep(tree, path, entry);
+            setDeep(tree, path, partialEntry);
         }
 
         // populate metadata

@@ -48,4 +48,11 @@ export {
     checkCapabilities,
     loadProfiles,
     initializeSource,
+    selectedEngine,
+    selectedRef,
+    availableEngines,
+    availableRefs,
+    setSelectedEngine,
+    setSelectedRef,
+    loadingProgress,
 } from '#/Config';
