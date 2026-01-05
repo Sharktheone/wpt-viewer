@@ -13,24 +13,17 @@ function isTreeNode(value: unknown): boolean {
 export function followDeep(obj: object, path: string[]) {
     let head = obj;
 
-    for (let i = 0, len = path.length; i < len; i++) {
-        const level = path[i];
+    for (const level of path) {
         if (!(level in head)) {
             return;
         }
 
         // @ts-ignore
-        const next = head[level];
-        // If we hit a non-tree-node (like a PartialEntry) but there are more path segments,
-        // the path doesn't exist in the tree structure
-        if (!isTreeNode(next)) {
-            return;
-        }
-        head = next;
+        head = head[level];
     }
 
     return head;
-};
+}
 
 export function setDeep(obj: object, path: string[], value: any) {
     let head = obj;
