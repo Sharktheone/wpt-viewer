@@ -1,6 +1,6 @@
 import '#/Style/components/RerunModal.scss';
 
-import { X, Play, RefreshCw, Wrench, ChevronDown, ChevronUp, AlertTriangle, Square, TrendingUp, TrendingDown, History, Trash2, GitCommit, Clock, Terminal, Timer } from 'lucide-preact';
+import { X, Play, RefreshCw, Wrench, ChevronDown, ChevronUp, AlertTriangle, Square, TrendingUp, TrendingDown, History, Trash2, GitCommit, Clock, Terminal, Timer, Copy, Check } from 'lucide-preact';
 import { useComputed, useSignal, type Signal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import { Button } from './Ui/Button';
@@ -33,6 +33,7 @@ import {
     type DiffBaseline,
 } from '#/RerunState';
 import { profiles } from '#/State';
+import { copyTransitionGroup, copyAllTransitionGroups, type DiffGroup } from '#/Utils/Clipboard';
 
 // Format a date as relative time (e.g., "2 min ago")
 function formatRelativeTime(dateStr: string): string {
@@ -261,6 +262,7 @@ function TransitionGroupSection({ group, expandedGroups }: { group: TransitionGr
     const groupKey = `${group.from}->${group.to}`;
     const isExpanded = expandedGroups.value.has(groupKey);
     const targetClass = group.targetStatus.toLowerCase();
+    const copied = useSignal(false);
     
     const toggle = () => {
         const newSet = new Set(expandedGroups.value);
@@ -271,6 +273,20 @@ function TransitionGroupSection({ group, expandedGroups }: { group: TransitionGr
         }
         expandedGroups.value = newSet;
     };
+    
+    const handleCopy = async (e: Event) => {
+        e.stopPropagation();
+        const diffGroup: DiffGroup = {
+            from: group.from,
+            to: group.to,
+            tests: group.tests.map(t => ({ path: t.path })),
+        };
+        const success = await copyTransitionGroup(diffGroup);
+        if (success) {
+            copied.value = true;
+            setTimeout(() => { copied.value = false; }, 2000);
+        }
+    };
 
     return (
         <div class={`transition-group target-${targetClass}`}>
@@ -280,6 +296,13 @@ function TransitionGroupSection({ group, expandedGroups }: { group: TransitionGr
                 <span class="arrow">→</span>
                 <span class={`status-badge ${group.to.toLowerCase()}`}>{group.to}</span>
                 <span class="count">({group.tests.length})</span>
+                <span 
+                    class={`copy-btn ${copied.value ? 'copied' : ''}`}
+                    onClick={handleCopy}
+                    title="Copy to clipboard"
+                >
+                    {copied.value ? <Check size={14} /> : <Copy size={14} />}
+                </span>
             </button>
             {isExpanded && (
                 <div class="transition-tests">
@@ -388,6 +411,7 @@ export function RerunModal() {
     const historyOpen = useSignal(false);
     const baselineOpen = useSignal(false);
     const baselineBtnRef = useRef<HTMLButtonElement>(null);
+    const allCopied = useSignal(false);
     
     // Close dropdowns when clicking outside
     const closeDropdowns = () => {
@@ -483,6 +507,19 @@ export function RerunModal() {
     }
 
     const hasChanges = totalChanges.value > 0;
+    
+    const handleCopyAll = async () => {
+        const diffGroups: DiffGroup[] = transitionGroups.value.map(g => ({
+            from: g.from,
+            to: g.to,
+            tests: g.tests.map(t => ({ path: t.path })),
+        }));
+        const success = await copyAllTransitionGroups(diffGroups);
+        if (success) {
+            allCopied.value = true;
+            setTimeout(() => { allCopied.value = false; }, 2000);
+        }
+    };
 
     return (
         <div class="RerunModal-overlay" onClick={closeRerunModal}>
@@ -657,6 +694,15 @@ export function RerunModal() {
                                                     -{diffStats.value.lost}
                                                 </span>
                                             )}
+                                            <button 
+                                                type="button"
+                                                class={`copy-all-btn ${allCopied.value ? 'copied' : ''}`}
+                                                onClick={handleCopyAll}
+                                                title="Copy all changes to clipboard"
+                                            >
+                                                {allCopied.value ? <Check size={14} /> : <Copy size={14} />}
+                                                <span>{allCopied.value ? 'Copied!' : 'Copy All'}</span>
+                                            </button>
                                         </div>
                                     </div>
                                     <div class="transition-groups">

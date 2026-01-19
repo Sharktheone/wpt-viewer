@@ -1,6 +1,6 @@
 import '#/Style/components/CompareView.scss';
 
-import { X, GitCompare, RefreshCw, ChevronDown, ChevronUp, TrendingUp, TrendingDown, ArrowLeftRight, GitCommit, Clock, Server, History } from 'lucide-preact';
+import { X, GitCompare, RefreshCw, ChevronDown, ChevronUp, TrendingUp, TrendingDown, ArrowLeftRight, GitCommit, Clock, Server, History, Copy, Check } from 'lucide-preact';
 import { useSignal, type Signal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import { Button } from './Ui/Button';
@@ -25,6 +25,7 @@ import {
     type CompareSource,
     type TransitionGroup,
 } from '#/CompareState';
+import { copyTransitionGroup, copyAllTransitionGroups, type DiffGroup } from '#/Utils/Clipboard';
 import { activeSource } from '#/Config';
 
 // Format relative time
@@ -287,6 +288,7 @@ function TransitionGroupSection({ group, expandedGroups }: {
     const groupKey = `${group.from}->${group.to}`;
     const isExpanded = expandedGroups.value.has(groupKey);
     const targetClass = group.to.toLowerCase();
+    const copied = useSignal(false);
     
     const toggle = () => {
         const newSet = new Set(expandedGroups.value);
@@ -298,6 +300,20 @@ function TransitionGroupSection({ group, expandedGroups }: {
         expandedGroups.value = newSet;
     };
     
+    const handleCopy = async (e: Event) => {
+        e.stopPropagation();
+        const diffGroup: DiffGroup = {
+            from: group.from,
+            to: group.to,
+            tests: group.tests.map(t => ({ path: t.path })),
+        };
+        const success = await copyTransitionGroup(diffGroup);
+        if (success) {
+            copied.value = true;
+            setTimeout(() => { copied.value = false; }, 2000);
+        }
+    };
+    
     return (
         <div class={`transition-group target-${targetClass}`}>
             <button type="button" class="transition-header" onClick={toggle}>
@@ -306,6 +322,13 @@ function TransitionGroupSection({ group, expandedGroups }: {
                 <span class="arrow">-&gt;</span>
                 <span class={`status-badge ${group.to.toLowerCase()}`}>{group.to}</span>
                 <span class="count">({group.tests.length})</span>
+                <span 
+                    class={`copy-btn ${copied.value ? 'copied' : ''}`}
+                    onClick={handleCopy}
+                    title="Copy to clipboard"
+                >
+                    {copied.value ? <Check size={14} /> : <Copy size={14} />}
+                </span>
             </button>
             {isExpanded && (
                 <div class="transition-tests">
@@ -329,6 +352,7 @@ export function CompareView() {
     const rightDropdownOpen = useSignal(false);
     const leftBtnRef = useRef<HTMLButtonElement>(null);
     const rightBtnRef = useRef<HTMLButtonElement>(null);
+    const allCopied = useSignal(false);
     
     const closeDropdowns = () => {
         leftDropdownOpen.value = false;
@@ -339,6 +363,19 @@ export function CompareView() {
     const stats = compareStats.value;
     const comparing = isComparing.value;
     const error = compareError.value;
+    
+    const handleCopyAll = async () => {
+        const diffGroups: DiffGroup[] = groups.map(g => ({
+            from: g.from,
+            to: g.to,
+            tests: g.tests.map(t => ({ path: t.path })),
+        }));
+        const success = await copyAllTransitionGroups(diffGroups);
+        if (success) {
+            allCopied.value = true;
+            setTimeout(() => { allCopied.value = false; }, 2000);
+        }
+    };
     
     if (!compareModalOpen.value) {
         return null;
@@ -462,6 +499,15 @@ export function CompareView() {
                                                     -{stats.lost}
                                                 </span>
                                             )}
+                                            <button 
+                                                type="button"
+                                                class={`copy-all-btn ${allCopied.value ? 'copied' : ''}`}
+                                                onClick={handleCopyAll}
+                                                title="Copy all changes to clipboard"
+                                            >
+                                                {allCopied.value ? <Check size={14} /> : <Copy size={14} />}
+                                                <span>{allCopied.value ? 'Copied!' : 'Copy All'}</span>
+                                            </button>
                                         </div>
                                     </div>
                                     <div class="transition-groups">

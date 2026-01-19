@@ -1,7 +1,7 @@
 import '#/Style/components/HistoryDetailView.scss';
 
 import { useSignal } from '@preact/signals';
-import { X, Clock, TrendingUp, TrendingDown, Play, Folder, Tag, ChevronDown, ChevronUp, Terminal, GitCompare } from 'lucide-preact';
+import { X, Clock, TrendingUp, TrendingDown, Play, Folder, Tag, ChevronDown, ChevronUp, Terminal, GitCompare, Copy, Check } from 'lucide-preact';
 import { Button } from './Ui/Button';
 import {
     historyDetailOpen,
@@ -13,6 +13,7 @@ import {
     type HistoryChangedTest,
 } from '#/RerunState';
 import { TestPathLink } from './TestPathLink';
+import { copyTransitionGroup, copyAllTransitionGroups, type DiffGroup } from '#/Utils/Clipboard';
 
 // Format date for display
 function formatDate(dateStr: string): string {
@@ -102,6 +103,7 @@ function TransitionGroupItem({ group, expandedGroups }: {
     const groupKey = `${group.from}->${group.to}`;
     const isExpanded = expandedGroups.value.has(groupKey);
     const targetClass = group.to.toLowerCase();
+    const copied = useSignal(false);
     
     const toggle = () => {
         const newSet = new Set(expandedGroups.value);
@@ -112,6 +114,20 @@ function TransitionGroupItem({ group, expandedGroups }: {
         }
         expandedGroups.value = newSet;
     };
+    
+    const handleCopy = async (e: Event) => {
+        e.stopPropagation();
+        const diffGroup: DiffGroup = {
+            from: group.from,
+            to: group.to,
+            tests: group.tests.map(t => ({ path: t.path })),
+        };
+        const success = await copyTransitionGroup(diffGroup);
+        if (success) {
+            copied.value = true;
+            setTimeout(() => { copied.value = false; }, 2000);
+        }
+    };
 
     return (
         <div class={`transition-group target-${targetClass}`}>
@@ -121,6 +137,13 @@ function TransitionGroupItem({ group, expandedGroups }: {
                 <span class="arrow">→</span>
                 <span class={`status-badge ${group.to.toLowerCase()}`}>{group.to}</span>
                 <span class="count">({group.tests.length})</span>
+                <span 
+                    class={`copy-btn ${copied.value ? 'copied' : ''}`}
+                    onClick={handleCopy}
+                    title="Copy to clipboard"
+                >
+                    {copied.value ? <Check size={14} /> : <Copy size={14} />}
+                </span>
             </button>
             {isExpanded && (
                 <div class="transition-tests">
@@ -190,6 +213,7 @@ export function HistoryDetailView() {
     const expandedGroups = useSignal<Set<string>>(new Set());
     const showBuildOutput = useSignal(false);
     const showChangedTests = useSignal(true);
+    const allCopied = useSignal(false);
     
     if (!historyDetailOpen.value || !entry) {
         return null;
@@ -199,6 +223,19 @@ export function HistoryDetailView() {
     const transitionGroups = entry.changedTests ? groupChangedTests(entry.changedTests) : [];
     const hasChanges = transitionGroups.length > 0;
     const hasBuildOutput = entry.buildOutput && entry.buildOutput.length > 0;
+    
+    const handleCopyAll = async () => {
+        const diffGroups: DiffGroup[] = transitionGroups.map(g => ({
+            from: g.from,
+            to: g.to,
+            tests: g.tests.map(t => ({ path: t.path })),
+        }));
+        const success = await copyAllTransitionGroups(diffGroups);
+        if (success) {
+            allCopied.value = true;
+            setTimeout(() => { allCopied.value = false; }, 2000);
+        }
+    };
     
     return (
         <div class="HistoryDetailView-overlay" onClick={closeHistoryDetail}>
@@ -298,15 +335,26 @@ export function HistoryDetailView() {
                     {/* Changed tests section - collapsible, matching RerunModal */}
                     {hasChanges && (
                         <div class="changes-section">
-                            <button 
-                                type="button"
-                                class="section-toggle"
-                                onClick={() => { showChangedTests.value = !showChangedTests.value; }}
-                            >
-                                {showChangedTests.value ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                <GitCompare size={16} />
-                                <span>Changed Tests ({entry.changedTests?.length || 0})</span>
-                            </button>
+                            <div class="changes-header">
+                                <button 
+                                    type="button"
+                                    class="section-toggle"
+                                    onClick={() => { showChangedTests.value = !showChangedTests.value; }}
+                                >
+                                    {showChangedTests.value ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                    <GitCompare size={16} />
+                                    <span>Changed Tests ({entry.changedTests?.length || 0})</span>
+                                </button>
+                                <button 
+                                    type="button"
+                                    class={`copy-all-btn ${allCopied.value ? 'copied' : ''}`}
+                                    onClick={handleCopyAll}
+                                    title="Copy all changes to clipboard"
+                                >
+                                    {allCopied.value ? <Check size={14} /> : <Copy size={14} />}
+                                    <span>{allCopied.value ? 'Copied!' : 'Copy All'}</span>
+                                </button>
+                            </div>
                             
                             {showChangedTests.value && (
                                 <div class="transition-groups">
