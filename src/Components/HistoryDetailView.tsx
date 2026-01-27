@@ -1,7 +1,7 @@
 import '#/Style/components/HistoryDetailView.scss';
 
 import { useSignal } from '@preact/signals';
-import { X, Clock, TrendingUp, TrendingDown, Play, Folder, Tag, ChevronDown, ChevronUp, Terminal, GitCompare } from 'lucide-preact';
+import { X, Clock, TrendingUp, TrendingDown, Play, Folder, Tag, ChevronDown, ChevronUp, Terminal, GitCompare, Cpu, Globe } from 'lucide-preact';
 import { Button } from './Ui/Button';
 import {
     historyDetailOpen,
@@ -58,6 +58,19 @@ function getPhaseText(phase: string): string {
         case 'running': return 'Running';
         case 'building': return 'Building';
         default: return phase;
+    }
+}
+
+// Get source display info
+function getSourceInfo(source?: string): { label: string; className: string; icon: typeof Cpu } {
+    switch (source) {
+        case 'mcp':
+            return { label: 'MCP', className: 'source-mcp', icon: Cpu };
+        case 'http':
+            return { label: 'HTTP', className: 'source-http', icon: Globe };
+        case 'stream':
+        default:
+            return { label: 'Web', className: 'source-stream', icon: Globe };
     }
 }
 
@@ -208,6 +221,16 @@ export function HistoryDetailView() {
                         <Clock size={20} />
                         Run Details
                     </h2>
+                    {entry.source && (() => {
+                        const sourceInfo = getSourceInfo(entry.source);
+                        const Icon = sourceInfo.icon;
+                        return (
+                            <span class={`source-badge ${sourceInfo.className}`} title={`Initiated via ${sourceInfo.label}`}>
+                                <Icon size={14} />
+                                {sourceInfo.label}
+                            </span>
+                        );
+                    })()}
                     <button 
                         type="button" 
                         class="close-btn" 

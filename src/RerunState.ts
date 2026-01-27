@@ -60,7 +60,9 @@ export interface HistoryChangedTest {
 export interface BackendRunHistoryEntry {
     id: string;
     path: string;
+    paths?: string[];  // Specific test paths (if used)
     profile?: string;
+    source?: string;   // 'http' | 'mcp' | 'stream'
     startedAt: string;
     completedAt?: string;
     phase: string;
@@ -72,9 +74,31 @@ export interface BackendRunHistoryEntry {
     timeout: number;
     gained: number;
     lost: number;
+    failedOnly?: boolean;
+    rebuild?: boolean;
     baselineRef?: string;
     changedTests?: HistoryChangedTest[];
     buildOutput?: string[];
+}
+
+// Run details (from /api/history/:id/details)
+export interface BackendRunDetails {
+    id: string;
+    before: Array<{ path: string; status: string }>;
+    after: Array<{ path: string; status: string }>;
+    diff: {
+        gained: Array<{ path: string; status: string }>;
+        lost: Array<{ path: string; status: string }>;
+        changed: Array<{ path: string; status: string }>;
+    };
+    duration: number;
+    status: string;
+    options: {
+        paths?: string[];
+        dir?: string;
+        failedOnly?: boolean;
+        rebuild?: boolean;
+    };
 }
 
 // Git types
@@ -213,6 +237,22 @@ export async function deleteHistoryRun(id: string) {
     } catch (err) {
         console.error('Failed to delete run:', err);
     }
+}
+
+// Fetch run details (before/after/diff)
+export async function fetchRunDetails(id: string): Promise<BackendRunDetails | null> {
+    const source = activeSource.value;
+    if (!source || source.type !== 'local') return null;
+
+    try {
+        const res = await fetch(`${source.baseUrl}/api/history/${id}/details`);
+        if (res.ok) {
+            return await res.json();
+        }
+    } catch (err) {
+        console.error('Failed to fetch run details:', err);
+    }
+    return null;
 }
 
 // Fetch commits from yavashark-data repo (via backend which calls GitHub API)

@@ -1,6 +1,6 @@
 import '#/Style/components/RerunModal.scss';
 
-import { X, Play, RefreshCw, Wrench, ChevronDown, ChevronUp, AlertTriangle, Square, TrendingUp, TrendingDown, History, Trash2, GitCommit, Clock, Terminal, Timer } from 'lucide-preact';
+import { X, Play, RefreshCw, Wrench, ChevronDown, ChevronUp, AlertTriangle, Square, TrendingUp, TrendingDown, History, Trash2, GitCommit, Clock, Terminal, Timer, Cpu, Globe } from 'lucide-preact';
 import { useComputed, useSignal, type Signal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import { Button } from './Ui/Button';
@@ -59,6 +59,19 @@ function formatRunStatus(phase: string): string {
     }
 }
 
+// Get source icon for history items
+function getSourceIcon(source?: string): { icon: typeof Cpu; title: string } {
+    switch (source) {
+        case 'mcp':
+            return { icon: Cpu, title: 'MCP/AI' };
+        case 'http':
+            return { icon: Globe, title: 'HTTP' };
+        case 'stream':
+        default:
+            return { icon: Globe, title: 'Web' };
+    }
+}
+
 // Compact history dropdown component
 function HistoryDropdown({ isOpen }: { isOpen: Signal<boolean> }) {
     const history = backendHistory.value;
@@ -103,6 +116,14 @@ function HistoryDropdown({ isOpen }: { isOpen: Signal<boolean> }) {
                                 </span>
                             </div>
                             <div class="history-item-meta">
+                                {entry.source && (() => {
+                                    const { icon: SourceIcon, title } = getSourceIcon(entry.source);
+                                    return (
+                                        <span class={`source-indicator source-${entry.source}`} title={title}>
+                                            <SourceIcon size={10} />
+                                        </span>
+                                    );
+                                })()}
                                 <span class="history-time">{formatRelativeTime(entry.startedAt)}</span>
                                 <span class="history-stats">
                                     <span class="pass">{entry.passed}</span>/<span class="total">{entry.total}</span>
