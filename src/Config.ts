@@ -230,6 +230,15 @@ export async function loadConfig(): Promise<AppConfig> {
                 description: 'Test262 results from LibJS (Ladybird)',
             };
         }
+        
+        if (!config.sources.kiesel) {
+            config.sources.kiesel = {
+                name: "Kiesel",
+                type: "kiesel",
+                baseUrl: "https://raw.codeberg.page/kiesel-js/kiesel/@main/tools/test262",
+                description: "Test262 results from the Kiesel JavaScript engine"
+            };
+        }
 
         if (savedDefaultProfile) {
             config.defaultProfile = savedDefaultProfile;
