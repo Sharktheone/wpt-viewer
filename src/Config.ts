@@ -102,6 +102,12 @@ function getDefaultConfig(): AppConfig {
                 description: 'Test262 results from the Boa JavaScript engine',
                 ...getSavedProviderOptions('boa'),
             },
+            kiesel: {
+              name: "Kiesel",
+              type: "kiesel",
+              baseUrl: "https://raw.codeberg.page/kiesel-js/kiesel/@main/tools/test262",
+              description: "Test262 results from the Kiesel JavaScript engine"
+            },
             test262fyi: {
                 name: 'test262.fyi',
                 type: 'test262fyi',
@@ -109,6 +115,7 @@ function getDefaultConfig(): AppConfig {
                 description: 'Aggregate test262 results from multiple JS engines',
                 engine: getSavedProviderOptions('test262fyi').engine || 'v8',
             },
+            
             libjs: {
                 name: 'LibJS (test262)',
                 type: 'libjs',
