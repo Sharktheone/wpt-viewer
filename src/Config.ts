@@ -178,12 +178,12 @@ export const activeSource = computed(() => {
 });
 
 // Load configuration from config.json
-export async function loadConfig(): Promise<AppConfig> {
+export async function loadConfig(url?: string): Promise<AppConfig> {
     const savedLocalUrl = getSavedLocalUrl();
     const savedDefaultProfile = localStorage.getItem('defaultProfile') || '';
 
     try {
-        const response = await fetch('./config.json');
+        const response = await fetch(url ?? './config.json');
         if (!response.ok) {
             throw new Error(`Failed to load config: ${response.status}`);
         }
