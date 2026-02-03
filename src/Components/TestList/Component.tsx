@@ -85,12 +85,19 @@ function FooterStats({tree, path}: { tree: Signal<EntryTree>, path: Signal<strin
         </div>
 
         <div class="subtests with-tooltip" data-title="Subtests passed / total subtests">
-            <TestTube2 size={16}/>
+            <TestTube2 size={16} />
             <span class={`subtests-passed subtests-passed-${ratioColor}`}>
                 {formatNumber(passed)}
             </span>
             &nbsp;/&nbsp;
             {formatNumber(total)}
+            
+            &nbsp;
+            (
+            <span class={`subtests-passed subtest-percentage subtests-passed-${ratioColor}`}>
+                {((passed / total) * 100).toFixed(2)}%
+            </span>
+            )
         </div>
     </div>
 }
