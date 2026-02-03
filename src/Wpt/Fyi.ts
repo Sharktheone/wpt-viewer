@@ -1,7 +1,7 @@
 import type { LongStatusType, ShortStatusType } from './Status';
 import { Tree } from './Tree';
 import { activeSource, selectedEngine, selectedRef, loadingProgress, type DataSourceConfig, type LoadingProgress } from '#/Config';
-import { KieselResultCode, kieselResultToShortStatus, KieselTests } from '#/DataProviders/KieselProvider';
+import { KieselResultCode, kieselResultToShortStatus } from '#/DataProviders/KieselProvider';
 
 export const Browsers = [
     'chrome',

@@ -61,7 +61,7 @@ export class KieselDataProvider implements DataProvider {
         return this.cachedMetadata;
     }
     
-    async fetchResults(options?: ProviderOptions): Promise<CompactTestEntry[]> {
+    async fetchResults(_options?: ProviderOptions): Promise<CompactTestEntry[]> {
         const tests = await this.fetchAvailableTests();
         const entries: CompactTestEntry[] = [];
         for (const [p, result] of Object.entries(tests)) {
