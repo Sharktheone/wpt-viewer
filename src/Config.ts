@@ -1,6 +1,6 @@
 import { signal, computed } from '@preact/signals';
 
-export type DataSourceType = 'github' | 'local' | 'boa' | 'test262fyi' | 'libjs';
+export type DataSourceType = 'github' | 'local' | 'boa' | 'test262fyi' | 'libjs' | 'kiesel';
 
 export interface LoadingProgress {
     fetched: number;

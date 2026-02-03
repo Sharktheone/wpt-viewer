@@ -1,6 +1,7 @@
 import type { LongStatusType, ShortStatusType } from './Status';
 import { Tree } from './Tree';
 import { activeSource, selectedEngine, selectedRef, loadingProgress, type DataSourceConfig, type LoadingProgress } from '#/Config';
+import { KieselResultCode, kieselResultToShortStatus, KieselTests } from '#/DataProviders/KieselProvider';
 
 export const Browsers = [
     'chrome',
@@ -263,6 +264,9 @@ export class Fyi {
             
             case 'libjs':
                 return await this.#fetchLibJSResults();
+                
+            case 'kiesel':
+                return await this.#fetchKieselResults();
             
             default:
                 throw new Error(`Unknown source type: ${this.#source.type}`);
@@ -328,7 +332,33 @@ export class Fyi {
         
         return results;
     }
-
+    
+    async #fetchKieselResults(): Promise<CompactTestEntry[]> {
+        const response = await fetch(`${this.#source.baseUrl}/results.json`);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch results: ${response.status}`);
+        }
+        
+        const data: Record<string, KieselResultCode> = await response.json();
+        const results: CompactTestEntry[] = [];
+        
+        for (const [path, status] of Object.entries(data)) {
+            // Paths in Kiesel data include the test/ prefix, strip it
+            // and ensure .js extension is preserved
+            let testPath = path;
+            if (testPath.startsWith('test/')) {
+                testPath = testPath.slice('test/'.length);
+            }
+            
+            results.push({
+                p: testPath,
+                s: kieselResultToShortStatus(status),
+            });
+        }
+        
+        return results;
+    }
+    
     async getTestDetails(path: string): Promise<FullEntry> {
         let data: { status?: string; msg?: string; duration?: number } = {};
 
