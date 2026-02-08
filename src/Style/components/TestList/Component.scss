@@ -60,6 +60,7 @@
         }
 
         .subtests {
+            white-space: nowrap;
             display: flex;
             align-items: center;
             margin-left: auto;
@@ -73,7 +74,7 @@
             color: common.$color-success;
             @include c.text-colorable;
         }
-        
+
     }
 
     thead {
