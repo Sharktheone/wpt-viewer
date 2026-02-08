@@ -273,6 +273,12 @@ export function setActiveSource(key: string): void {
         console.error(`Unknown data source: ${key}`);
         return;
     }
+    
+    // Only update and reset capabilities if source is actually changing
+    if (activeSourceKey.value === key) {
+        return; // Same source, no need to reset capabilities
+    }
+    
     activeSourceKey.value = key;
     localStorage.setItem('dataSource', key);
 
