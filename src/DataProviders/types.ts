@@ -91,7 +91,7 @@ export interface DataProvider {
     readonly description: string;
     
     /** Icon type for UI display */
-    readonly iconType: 'github' | 'server' | 'database' | 'cloud';
+    readonly iconType: 'github' | 'server' | 'database' | 'cloud' | 'stone';
     
     /**
      * Get the capabilities of this provider

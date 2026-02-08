@@ -1,6 +1,6 @@
 import { signal, computed } from '@preact/signals';
 
-export type DataSourceType = 'github' | 'local' | 'boa' | 'test262fyi' | 'libjs';
+export type DataSourceType = 'github' | 'local' | 'boa' | 'test262fyi' | 'libjs' | 'kiesel';
 
 export interface LoadingProgress {
     fetched: number;
@@ -102,6 +102,12 @@ function getDefaultConfig(): AppConfig {
                 description: 'Test262 results from the Boa JavaScript engine',
                 ...getSavedProviderOptions('boa'),
             },
+            kiesel: {
+              name: "Kiesel",
+              type: "kiesel",
+              baseUrl: "https://raw.codeberg.page/kiesel-js/kiesel/@main/tools/test262",
+              description: "Test262 results from the Kiesel JavaScript engine"
+            },
             test262fyi: {
                 name: 'test262.fyi',
                 type: 'test262fyi',
@@ -109,6 +115,7 @@ function getDefaultConfig(): AppConfig {
                 description: 'Aggregate test262 results from multiple JS engines',
                 engine: getSavedProviderOptions('test262fyi').engine || 'v8',
             },
+            
             libjs: {
                 name: 'LibJS (test262)',
                 type: 'libjs',
@@ -171,12 +178,12 @@ export const activeSource = computed(() => {
 });
 
 // Load configuration from config.json
-export async function loadConfig(): Promise<AppConfig> {
+export async function loadConfig(url?: string): Promise<AppConfig> {
     const savedLocalUrl = getSavedLocalUrl();
     const savedDefaultProfile = localStorage.getItem('defaultProfile') || '';
 
     try {
-        const response = await fetch('./config.json');
+        const response = await fetch(url ?? './config.json');
         if (!response.ok) {
             throw new Error(`Failed to load config: ${response.status}`);
         }
@@ -228,6 +235,15 @@ export async function loadConfig(): Promise<AppConfig> {
                 type: 'libjs',
                 baseUrl: 'https://raw.githubusercontent.com/LadybirdBrowser/libjs-data/refs/heads/master/test262',
                 description: 'Test262 results from LibJS (Ladybird)',
+            };
+        }
+        
+        if (!config.sources.kiesel) {
+            config.sources.kiesel = {
+                name: "Kiesel",
+                type: "kiesel",
+                baseUrl: "https://raw.codeberg.page/kiesel-js/kiesel/@main/tools/test262",
+                description: "Test262 results from the Kiesel JavaScript engine"
             };
         }
 

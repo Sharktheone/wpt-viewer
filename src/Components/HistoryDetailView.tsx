@@ -1,7 +1,7 @@
 import '#/Style/components/HistoryDetailView.scss';
 
 import { useSignal } from '@preact/signals';
-import { X, Clock, TrendingUp, TrendingDown, Play, Folder, Tag, ChevronDown, ChevronUp, Terminal, GitCompare, Copy, Check } from 'lucide-preact';
+import { X, Clock, TrendingUp, TrendingDown, Play, Folder, Tag, ChevronDown, ChevronUp, Terminal, GitCompare, Copy, Check, Cpu, Globe } from 'lucide-preact';
 import { Button } from './Ui/Button';
 import {
     historyDetailOpen,
@@ -24,11 +24,11 @@ function formatDate(dateStr: string): string {
 // Format duration between two dates
 function formatDuration(startStr: string, endStr?: string): string {
     if (!endStr) return '-';
-    
+
     const start = new Date(startStr);
     const end = new Date(endStr);
     const ms = end.getTime() - start.getTime();
-    
+
     if (ms < 1000) return `${ms}ms`;
     const seconds = Math.floor(ms / 1000);
     if (seconds < 60) return `${seconds}s`;
@@ -62,6 +62,19 @@ function getPhaseText(phase: string): string {
     }
 }
 
+// Get source display info
+function getSourceInfo(source?: string): { label: string; className: string; icon: typeof Cpu } {
+    switch (source) {
+        case 'mcp':
+            return { label: 'MCP', className: 'source-mcp', icon: Cpu };
+        case 'http':
+            return { label: 'HTTP', className: 'source-http', icon: Globe };
+        case 'stream':
+        default:
+            return { label: 'Web', className: 'source-stream', icon: Globe };
+    }
+}
+
 // Group changed tests by transition type
 interface TransitionGroup {
     from: string;
@@ -71,7 +84,7 @@ interface TransitionGroup {
 
 function groupChangedTests(tests: HistoryChangedTest[]): TransitionGroup[] {
     const groups = new Map<string, TransitionGroup>();
-    
+
     for (const test of tests) {
         const key = `${test.oldStatus}->${test.newStatus}`;
         if (!groups.has(key)) {
@@ -83,7 +96,7 @@ function groupChangedTests(tests: HistoryChangedTest[]): TransitionGroup[] {
         }
         groups.get(key)!.tests.push(test);
     }
-    
+
     // Sort: gains first (to PASS), then losses (from PASS), then others
     const isGain = (g: TransitionGroup) => g.to === 'PASS';
     return Array.from(groups.values()).sort((a, b) => {
@@ -96,15 +109,15 @@ function groupChangedTests(tests: HistoryChangedTest[]): TransitionGroup[] {
 }
 
 // Transition group component - matching RerunModal style
-function TransitionGroupItem({ group, expandedGroups }: { 
-    group: TransitionGroup, 
+function TransitionGroupItem({ group, expandedGroups }: {
+    group: TransitionGroup,
     expandedGroups: { value: Set<string> }
 }) {
     const groupKey = `${group.from}->${group.to}`;
     const isExpanded = expandedGroups.value.has(groupKey);
     const targetClass = group.to.toLowerCase();
     const copied = useSignal(false);
-    
+
     const toggle = () => {
         const newSet = new Set(expandedGroups.value);
         if (isExpanded) {
@@ -114,7 +127,7 @@ function TransitionGroupItem({ group, expandedGroups }: {
         }
         expandedGroups.value = newSet;
     };
-    
+
     const handleCopy = async (e: Event) => {
         e.stopPropagation();
         const diffGroup: DiffGroup = {
@@ -137,7 +150,7 @@ function TransitionGroupItem({ group, expandedGroups }: {
                 <span class="arrow">→</span>
                 <span class={`status-badge ${group.to.toLowerCase()}`}>{group.to}</span>
                 <span class="count">({group.tests.length})</span>
-                <span 
+                <span
                     class={`copy-btn ${copied.value ? 'copied' : ''}`}
                     onClick={handleCopy}
                     title="Copy to clipboard"
@@ -148,7 +161,7 @@ function TransitionGroupItem({ group, expandedGroups }: {
             {isExpanded && (
                 <div class="transition-tests">
                     {group.tests.map(test => (
-                        <TestPathLink 
+                        <TestPathLink
                             key={test.path}
                             path={test.path}
                             status={test.newStatus}
@@ -165,7 +178,7 @@ function TransitionGroupItem({ group, expandedGroups }: {
 function StatsGrid({ entry }: { entry: BackendRunHistoryEntry }) {
     const total = entry.total || 1;
     const pct = (v: number) => ((v / total) * 100).toFixed(1);
-    
+
     return (
         <div class="stats">
             <div class="stat pass">
@@ -214,16 +227,16 @@ export function HistoryDetailView() {
     const showBuildOutput = useSignal(false);
     const showChangedTests = useSignal(true);
     const allCopied = useSignal(false);
-    
+
     if (!historyDetailOpen.value || !entry) {
         return null;
     }
-    
+
     const passRate = entry.total > 0 ? ((entry.passed / entry.total) * 100).toFixed(1) : '0.0';
     const transitionGroups = entry.changedTests ? groupChangedTests(entry.changedTests) : [];
     const hasChanges = transitionGroups.length > 0;
     const hasBuildOutput = entry.buildOutput && entry.buildOutput.length > 0;
-    
+
     const handleCopyAll = async () => {
         const diffGroups: DiffGroup[] = transitionGroups.map(g => ({
             from: g.from,
@@ -236,7 +249,7 @@ export function HistoryDetailView() {
             setTimeout(() => { allCopied.value = false; }, 2000);
         }
     };
-    
+
     return (
         <div class="HistoryDetailView-overlay" onClick={closeHistoryDetail}>
             <div class="HistoryDetailView" onClick={(e) => e.stopPropagation()}>
@@ -245,16 +258,26 @@ export function HistoryDetailView() {
                         <Clock size={20} />
                         Run Details
                     </h2>
-                    <button 
-                        type="button" 
-                        class="close-btn" 
+                    {entry.source && (() => {
+                        const sourceInfo = getSourceInfo(entry.source);
+                        const Icon = sourceInfo.icon;
+                        return (
+                            <span class={`source-badge ${sourceInfo.className}`} title={`Initiated via ${sourceInfo.label}`}>
+                                <Icon size={14} />
+                                {sourceInfo.label}
+                            </span>
+                        );
+                    })()}
+                    <button
+                        type="button"
+                        class="close-btn"
                         onClick={closeHistoryDetail}
                         title="Close"
                     >
                         <X size={20} />
                     </button>
                 </div>
-                
+
                 <div class="modal-body">
                     {/* Run info section */}
                     <div class="info-section">
@@ -263,7 +286,7 @@ export function HistoryDetailView() {
                             <span class="label">Path:</span>
                             <span class="value">{entry.path || 'All tests'}</span>
                         </div>
-                        
+
                         {entry.profile && (
                             <div class="info-row">
                                 <Tag size={16} />
@@ -271,13 +294,13 @@ export function HistoryDetailView() {
                                 <span class="value">{entry.profile}</span>
                             </div>
                         )}
-                        
+
                         <div class="info-row">
                             <Clock size={16} />
                             <span class="label">Started:</span>
                             <span class="value">{formatDate(entry.startedAt)}</span>
                         </div>
-                        
+
                         {entry.completedAt && (
                             <div class="info-row">
                                 <Clock size={16} />
@@ -285,14 +308,14 @@ export function HistoryDetailView() {
                                 <span class="value">{formatDuration(entry.startedAt, entry.completedAt)}</span>
                             </div>
                         )}
-                        
+
                         <div class="info-row">
                             <span class={`status-badge ${getPhaseClass(entry.phase)}`}>
                                 {getPhaseText(entry.phase)}
                             </span>
                         </div>
                     </div>
-                    
+
                     {/* Progress bar */}
                     <div class="progress-bar-container">
                         <div class="progress-bar-multi">
@@ -303,14 +326,14 @@ export function HistoryDetailView() {
                             <div class="progress-segment skip" style={{ width: `${(entry.skipped / entry.total) * 100}%` }} />
                         </div>
                     </div>
-                    
+
                     {/* Stats with pass rate highlight */}
                     <div class="stats-section">
                         <div class="pass-rate">
                             <span class="value">{passRate}%</span>
                             <span class="label">Pass Rate</span>
                         </div>
-                        
+
                         {(entry.gained > 0 || entry.lost > 0) && (
                             <div class="delta-summary">
                                 {entry.gained > 0 && (
@@ -328,15 +351,15 @@ export function HistoryDetailView() {
                             </div>
                         )}
                     </div>
-                    
+
                     {/* Stats grid - matching RerunModal */}
                     <StatsGrid entry={entry} />
-                    
+
                     {/* Changed tests section - collapsible, matching RerunModal */}
                     {hasChanges && (
                         <div class="changes-section">
                             <div class="changes-header">
-                                <button 
+                                <button
                                     type="button"
                                     class="section-toggle"
                                     onClick={() => { showChangedTests.value = !showChangedTests.value; }}
@@ -345,7 +368,7 @@ export function HistoryDetailView() {
                                     <GitCompare size={16} />
                                     <span>Changed Tests ({entry.changedTests?.length || 0})</span>
                                 </button>
-                                <button 
+                                <button
                                     type="button"
                                     class={`copy-all-btn ${allCopied.value ? 'copied' : ''}`}
                                     onClick={handleCopyAll}
@@ -355,11 +378,11 @@ export function HistoryDetailView() {
                                     <span>{allCopied.value ? 'Copied!' : 'Copy All'}</span>
                                 </button>
                             </div>
-                            
+
                             {showChangedTests.value && (
                                 <div class="transition-groups">
                                     {transitionGroups.map(group => (
-                                        <TransitionGroupItem 
+                                        <TransitionGroupItem
                                             key={`${group.from}->${group.to}`}
                                             group={group}
                                             expandedGroups={expandedGroups}
@@ -369,11 +392,11 @@ export function HistoryDetailView() {
                             )}
                         </div>
                     )}
-                    
+
                     {/* Build output section - collapsible, matching RerunModal */}
                     {hasBuildOutput && (
                         <div class="build-output-section">
-                            <button 
+                            <button
                                 type="button"
                                 class="section-toggle"
                                 onClick={() => { showBuildOutput.value = !showBuildOutput.value; }}
@@ -382,7 +405,7 @@ export function HistoryDetailView() {
                                 <Terminal size={16} />
                                 <span>Build Output ({entry.buildOutput?.length || 0} lines)</span>
                             </button>
-                            
+
                             {showBuildOutput.value && (
                                 <div class="build-output-container">
                                     {entry.buildOutput!.map((line, i) => (
@@ -392,7 +415,7 @@ export function HistoryDetailView() {
                             )}
                         </div>
                     )}
-                    
+
                     {/* Baseline reference if available */}
                     {entry.baselineRef && (
                         <div class="baseline-info">
@@ -401,7 +424,7 @@ export function HistoryDetailView() {
                         </div>
                     )}
                 </div>
-                
+
                 <div class="modal-footer">
                     <Button color="primary" icon={Play} onClick={() => handleRerun(entry)}>
                         Rerun This Path

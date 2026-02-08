@@ -1,6 +1,6 @@
 import '#/Style/components/RerunModal.scss';
 
-import { X, Play, RefreshCw, Wrench, ChevronDown, ChevronUp, AlertTriangle, Square, TrendingUp, TrendingDown, History, Trash2, GitCommit, Clock, Terminal, Timer, Copy, Check } from 'lucide-preact';
+import { X, Play, RefreshCw, Wrench, ChevronDown, ChevronUp, AlertTriangle, Square, TrendingUp, TrendingDown, History, Trash2, GitCommit, Clock, Terminal, Timer, Copy, Check, Cpu, Globe } from 'lucide-preact';
 import { useComputed, useSignal, type Signal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import { Button } from './Ui/Button';
@@ -43,7 +43,7 @@ function formatRelativeTime(dateStr: string): string {
     const diffSec = Math.floor(diffMs / 1000);
     const diffMin = Math.floor(diffSec / 60);
     const diffHour = Math.floor(diffMin / 60);
-    
+
     if (diffSec < 60) return 'just now';
     if (diffMin < 60) return `${diffMin}m ago`;
     if (diffHour < 24) return `${diffHour}h ago`;
@@ -60,26 +60,39 @@ function formatRunStatus(phase: string): string {
     }
 }
 
+// Get source icon for history items
+function getSourceIcon(source?: string): { icon: typeof Cpu; title: string } {
+    switch (source) {
+        case 'mcp':
+            return { icon: Cpu, title: 'MCP/AI' };
+        case 'http':
+            return { icon: Globe, title: 'HTTP' };
+        case 'stream':
+        default:
+            return { icon: Globe, title: 'Web' };
+    }
+}
+
 // Compact history dropdown component
 function HistoryDropdown({ isOpen }: { isOpen: Signal<boolean> }) {
     const history = backendHistory.value;
     const loading = historyLoading.value;
-    
+
     if (!isOpen.value) return null;
-    
+
     const handleDelete = async (e: Event, id: string) => {
         e.stopPropagation();
         e.preventDefault();
         await deleteHistoryRun(id);
     };
-    
+
     const handleItemClick = (e: Event, entry: typeof history[0]) => {
         e.stopPropagation();
         e.preventDefault();
         isOpen.value = false;
         openHistoryDetail(entry);
     };
-    
+
     return (
         <div class="history-dropdown" onClick={(e) => e.stopPropagation()}>
             <div class="history-dropdown-header">
@@ -104,6 +117,14 @@ function HistoryDropdown({ isOpen }: { isOpen: Signal<boolean> }) {
                                 </span>
                             </div>
                             <div class="history-item-meta">
+                                {entry.source && (() => {
+                                    const { icon: SourceIcon, title } = getSourceIcon(entry.source);
+                                    return (
+                                        <span class={`source-indicator source-${entry.source}`} title={title}>
+                                            <SourceIcon size={10} />
+                                        </span>
+                                    );
+                                })()}
                                 <span class="history-time">{formatRelativeTime(entry.startedAt)}</span>
                                 <span class="history-stats">
                                     <span class="pass">{entry.passed}</span>/<span class="total">{entry.total}</span>
@@ -111,7 +132,7 @@ function HistoryDropdown({ isOpen }: { isOpen: Signal<boolean> }) {
                                 {entry.gained > 0 && <span class="gained">+{entry.gained}</span>}
                                 {entry.lost > 0 && <span class="lost">-{entry.lost}</span>}
                             </div>
-                            <span 
+                            <span
                                 class="delete-btn"
                                 onClick={(e) => handleDelete(e, entry.id)}
                                 title="Delete run"
@@ -127,8 +148,8 @@ function HistoryDropdown({ isOpen }: { isOpen: Signal<boolean> }) {
 }
 
 // Baseline selector dropdown - simplified, fetches from yavashark-data repo
-function BaselineSelector({ isOpen, onClose, anchorRef }: { 
-    isOpen: Signal<boolean>, 
+function BaselineSelector({ isOpen, onClose, anchorRef }: {
+    isOpen: Signal<boolean>,
     onClose: () => void,
     anchorRef: preact.RefObject<HTMLButtonElement>
 }) {
@@ -137,7 +158,7 @@ function BaselineSelector({ isOpen, onClose, anchorRef }: {
     const history = backendHistory.value;
     const commitsLoading = useSignal(false);
     const dropdownStyle = useSignal<{ top: number; right: number } | null>(null);
-    
+
     // Fetch commits when dropdown opens
     useEffect(() => {
         if (isOpen.value && commits.length === 0) {
@@ -147,7 +168,7 @@ function BaselineSelector({ isOpen, onClose, anchorRef }: {
             });
         }
     }, [isOpen.value]);
-    
+
     // Calculate position when open
     useEffect(() => {
         if (isOpen.value && anchorRef.current) {
@@ -158,27 +179,27 @@ function BaselineSelector({ isOpen, onClose, anchorRef }: {
             };
         }
     }, [isOpen.value]);
-    
+
     if (!isOpen.value || !dropdownStyle.value) return null;
-    
+
     const setBaseline = (newBaseline: DiffBaseline) => {
         diffBaseline.value = newBaseline;
         onClose();
     };
-    
+
     return (
-        <div 
-            class="baseline-dropdown" 
-            style={{ 
+        <div
+            class="baseline-dropdown"
+            style={{
                 position: 'fixed',
-                top: `${dropdownStyle.value.top}px`, 
+                top: `${dropdownStyle.value.top}px`,
                 right: `${dropdownStyle.value.right}px`,
             }}
         >
             <div class="baseline-dropdown-header">
                 Compare Against
             </div>
-            
+
             <div class="baseline-options">
                 {/* Current results option */}
                 <button
@@ -189,14 +210,14 @@ function BaselineSelector({ isOpen, onClose, anchorRef }: {
                     <Clock size={14} />
                     <span>Current results.json</span>
                 </button>
-                
+
                 {/* Commit selection - directly show commits from yavashark-data */}
                 <div class="baseline-section-label">
                     <GitCommit size={12} />
                     <span>From yavashark-data</span>
                     {commitsLoading.value && <RefreshCw size={12} class="spinning" />}
                 </div>
-                
+
                 <div class="commit-list">
                     {commits.length === 0 && !commitsLoading.value && (
                         <div class="empty-message">No commits found</div>
@@ -213,7 +234,7 @@ function BaselineSelector({ isOpen, onClose, anchorRef }: {
                         </button>
                     ))}
                 </div>
-                
+
                 {/* Previous runs */}
                 {history.length > 0 && (
                     <>
@@ -263,7 +284,7 @@ function TransitionGroupSection({ group, expandedGroups }: { group: TransitionGr
     const isExpanded = expandedGroups.value.has(groupKey);
     const targetClass = group.targetStatus.toLowerCase();
     const copied = useSignal(false);
-    
+
     const toggle = () => {
         const newSet = new Set(expandedGroups.value);
         if (isExpanded) {
@@ -273,7 +294,7 @@ function TransitionGroupSection({ group, expandedGroups }: { group: TransitionGr
         }
         expandedGroups.value = newSet;
     };
-    
+
     const handleCopy = async (e: Event) => {
         e.stopPropagation();
         const diffGroup: DiffGroup = {
@@ -296,7 +317,7 @@ function TransitionGroupSection({ group, expandedGroups }: { group: TransitionGr
                 <span class="arrow">→</span>
                 <span class={`status-badge ${group.to.toLowerCase()}`}>{group.to}</span>
                 <span class="count">({group.tests.length})</span>
-                <span 
+                <span
                     class={`copy-btn ${copied.value ? 'copied' : ''}`}
                     onClick={handleCopy}
                     title="Copy to clipboard"
@@ -307,9 +328,9 @@ function TransitionGroupSection({ group, expandedGroups }: { group: TransitionGr
             {isExpanded && (
                 <div class="transition-tests">
                     {group.tests.map(test => (
-                        <TestPathLink 
+                        <TestPathLink
                             key={test.path}
-                            path={test.path} 
+                            path={test.path}
                             status={test.status}
                             message={test.message}
                             variant="compact"
@@ -326,21 +347,21 @@ function BuildOutputSection() {
     const outputRef = useRef<HTMLDivElement>(null);
     const lines = buildOutput.value;
     const isBuilding = rerunProgress.value.phase === 'building';
-    
+
     // Auto-scroll to bottom when new lines are added
     useEffect(() => {
         if (outputRef.current && showBuildOutput.value) {
             outputRef.current.scrollTop = outputRef.current.scrollHeight;
         }
     }, [lines.length]);
-    
+
     if (lines.length === 0 && !isBuilding) {
         return null;
     }
-    
+
     return (
         <div class="build-output-section">
-            <button 
+            <button
                 type="button"
                 class="build-output-toggle"
                 onClick={() => { showBuildOutput.value = !showBuildOutput.value; }}
@@ -350,7 +371,7 @@ function BuildOutputSection() {
                 <span>Build Output ({lines.length} lines)</span>
                 {isBuilding && <RefreshCw size={14} class="spinning" />}
             </button>
-            
+
             {showBuildOutput.value && (
                 <div class="build-output-container" ref={outputRef}>
                     {lines.map((line, i) => (
@@ -369,7 +390,7 @@ function BuildOutputSection() {
 function TimingSection() {
     const timing = useSignal(getTimingDisplay());
     const running = isRunning.value;
-    
+
     // Update timing every second while running
     useEffect(() => {
         if (!running) {
@@ -377,20 +398,20 @@ function TimingSection() {
             timing.value = getTimingDisplay();
             return;
         }
-        
+
         const interval = setInterval(() => {
             timing.value = getTimingDisplay();
         }, 1000);
-        
+
         return () => clearInterval(interval);
     }, [running]);
-    
+
     const { buildDuration, testDuration, totalDuration } = timing.value;
-    
+
     if (!totalDuration) {
         return null;
     }
-    
+
     // Compact display: show build time in parentheses if available, otherwise just total
     // e.g., "2m 35s" or "2m 35s (build: 45s)"
     return (
@@ -412,17 +433,17 @@ export function RerunModal() {
     const baselineOpen = useSignal(false);
     const baselineBtnRef = useRef<HTMLButtonElement>(null);
     const allCopied = useSignal(false);
-    
+
     // Close dropdowns when clicking outside
     const closeDropdowns = () => {
         historyOpen.value = false;
         baselineOpen.value = false;
     };
-    
+
     const profileOptions = useComputed(() => {
         const profilesData = profiles.value;
         if (!profilesData?.profiles) return [];
-        
+
         return Object.keys(profilesData.profiles).map(name => (
             <option value={name} key={name}>{name}</option>
         ));
@@ -448,9 +469,9 @@ export function RerunModal() {
         const diff = diffStats.value;
         const total = p.completed || 1;
         const pct = (v: number) => total > 0 ? ((v / total) * 100).toFixed(1) : '0.0';
-        
+
         const getDelta = (key: keyof typeof diff.byStatus) => diff.byStatus[key];
-        
+
         return [
             { label: 'Passed', value: p.passed, pct: pct(p.passed), class: 'pass', ...getDelta('pass') },
             { label: 'Failed', value: p.failed, pct: pct(p.failed), class: 'fail', ...getDelta('fail') },
@@ -464,11 +485,11 @@ export function RerunModal() {
     const transitionGroups = useComputed(() => {
         const diff = diffStats.value;
         const groups = new Map<string, TransitionGroup>();
-        
+
         for (const test of diff.changedTests) {
             if (!test.previousStatus) continue;
             const key = `${test.previousStatus}->${test.status}`;
-            
+
             if (!groups.has(key)) {
                 groups.set(key, {
                     from: test.previousStatus,
@@ -479,7 +500,7 @@ export function RerunModal() {
             }
             groups.get(key)!.tests.push(test);
         }
-        
+
         // Sort: gains first (to PASS), then losses (from PASS), then others
         const isGain = (g: TransitionGroup) => g.to === 'PASS';
         return Array.from(groups.values()).sort((a, b) => {
@@ -499,7 +520,7 @@ export function RerunModal() {
     const progressBars = useComputed(() => progressBreakdown.value);
 
     const totalChanges = useComputed(() => diffStats.value.changedTests.length);
-    
+
     const historyCount = useComputed(() => backendHistory.value.length);
 
     if (!rerunModalOpen.value) {
@@ -507,7 +528,7 @@ export function RerunModal() {
     }
 
     const hasChanges = totalChanges.value > 0;
-    
+
     const handleCopyAll = async () => {
         const diffGroups: DiffGroup[] = transitionGroups.value.map(g => ({
             from: g.from,
@@ -535,8 +556,8 @@ export function RerunModal() {
                     <div class="header-actions">
                         {/* History button */}
                         <div class="dropdown-container" onClick={(e) => e.stopPropagation()}>
-                            <button 
-                                type="button" 
+                            <button
+                                type="button"
                                 class={`header-btn ${historyOpen.value ? 'active' : ''}`}
                                 onClick={() => { historyOpen.value = !historyOpen.value; baselineOpen.value = false; }}
                                 title="Run history"
@@ -548,11 +569,11 @@ export function RerunModal() {
                             </button>
                             <HistoryDropdown isOpen={historyOpen} />
                         </div>
-                        
+
                         {/* Close button */}
-                        <button 
-                            type="button" 
-                            class="close-btn" 
+                        <button
+                            type="button"
+                            class="close-btn"
                             onClick={closeRerunModal}
                             title="Close (run continues in background)"
                         >
@@ -568,8 +589,8 @@ export function RerunModal() {
                             <div class="config-row">
                                 <label>
                                     <span>Path:</span>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         value={rerunConfig.value.path}
                                         placeholder="Leave empty for all tests"
                                         onInput={(e) => {
@@ -581,11 +602,11 @@ export function RerunModal() {
                                     />
                                 </label>
                             </div>
-                            
+
                             <div class="config-row">
                                 <label class="checkbox">
-                                    <input 
-                                        type="checkbox" 
+                                    <input
+                                        type="checkbox"
                                         checked={rerunConfig.value.rebuild}
                                         onChange={(e) => {
                                             rerunConfig.value = {
@@ -602,7 +623,7 @@ export function RerunModal() {
                             <div class="config-row split">
                                 <div class="field">
                                     <span>Profile:</span>
-                                    <Select 
+                                    <Select
                                         value={rerunConfig.value.profile}
                                         onInput={(e) => {
                                             rerunConfig.value = {
@@ -615,7 +636,7 @@ export function RerunModal() {
                                         {profileOptions}
                                     </Select>
                                 </div>
-                                
+
                                 {/* Baseline selector */}
                                 <div class="field" onClick={(e) => e.stopPropagation()}>
                                     <span>Baseline:</span>
@@ -630,11 +651,11 @@ export function RerunModal() {
                                     </button>
                                 </div>
                             </div>
-                            
+
                             {/* Baseline dropdown rendered at modal level to avoid clipping */}
-                            <BaselineSelector 
-                                isOpen={baselineOpen} 
-                                onClose={() => { baselineOpen.value = false; }} 
+                            <BaselineSelector
+                                isOpen={baselineOpen}
+                                onClose={() => { baselineOpen.value = false; }}
                                 anchorRef={baselineBtnRef}
                             />
                         </div>
@@ -694,7 +715,7 @@ export function RerunModal() {
                                                     -{diffStats.value.lost}
                                                 </span>
                                             )}
-                                            <button 
+                                            <button
                                                 type="button"
                                                 class={`copy-all-btn ${allCopied.value ? 'copied' : ''}`}
                                                 onClick={handleCopyAll}
@@ -707,7 +728,7 @@ export function RerunModal() {
                                     </div>
                                     <div class="transition-groups">
                                         {transitionGroups.value.map(group => (
-                                            <TransitionGroupSection 
+                                            <TransitionGroupSection
                                                 key={`${group.from}->${group.to}`}
                                                 group={group}
                                                 expandedGroups={expandedGroups}
@@ -729,7 +750,7 @@ export function RerunModal() {
                     {/* Results list */}
                     {rerunResults.value.length > 0 && (
                         <div class="results-section">
-                            <button 
+                            <button
                                 type="button"
                                 class="results-toggle"
                                 onClick={() => { showResults.value = !showResults.value; }}
@@ -743,7 +764,7 @@ export function RerunModal() {
                                     {recentResults.value.map(result => (
                                         <div class={`result-item ${result.status.toLowerCase()}`} key={result.path}>
                                             <span class={`status-badge ${result.status.toLowerCase()}`}>{result.status}</span>
-                                            <TestPathLink 
+                                            <TestPathLink
                                                 path={result.path}
                                                 status={result.status}
                                                 message={result.message}
@@ -766,14 +787,14 @@ export function RerunModal() {
                             Start
                         </Button>
                     )}
-                    
+
                     {/* Cancel button - only when running */}
                     {isRunning.value && (
                         <Button color="danger" icon={Square} onClick={cancelRerun}>
                             Cancel
                         </Button>
                     )}
-                    
+
                     {/* Close button - always shown */}
                     <Button color="secondary" onClick={closeRerunModal}>
                         {isRunning.value ? 'Minimize' : 'Close'}
