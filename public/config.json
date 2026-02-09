@@ -1,43 +1,24 @@
 {
-  "defaultSource": "github",
-  "sources": {
-    "github": {
-      "name": "GitHub (Yavashark)",
-      "type": "github",
-      "baseUrl": "https://raw.githubusercontent.com/Sharktheone/yavashark-data",
-      "description": "Read-only WPT results from Yavashark"
-    },
-    "local": {
-      "name": "Local Server",
-      "type": "local",
-      "baseUrl": "http://localhost:1215",
-      "description": "Local development server with rerun capabilities"
-    },
-    "boa": {
-      "name": "Boa (test262)",
-      "type": "boa",
-      "baseUrl": "https://raw.githubusercontent.com/boa-dev/data/main/test262",
-      "description": "Test262 results from the Boa JavaScript engine"
-    },
-    
-    "kiesel": {
-      "name": "Kiesel",
-      "type": "kiesel",
-      "baseUrl": "https://raw.codeberg.page/kiesel-js/kiesel/@main/tools/test262",
-      "description": "Test262 results from the Kiesel JavaScript engine"
-    },
-    "test262fyi": {
-      "name": "test262.fyi",
-      "type": "test262fyi",
-      "baseUrl": "https://data.test262.fyi",
-      "description": "Aggregate test262 results from multiple JS engines"
-    },
-    "libjs": {
-      "name": "LibJS (test262)",
-      "type": "libjs",
-      "baseUrl": "https://raw.githubusercontent.com/LadybirdBrowser/libjs-data/refs/heads/master/test262",
-      "description": "Test262 results from LibJS (Ladybird)"
+    "defaultSource": "github",
+    "defaultProfile": "fast",
+    "sources": {
+        "github": {
+            "enabled": true
+        },
+        "local": {
+            "enabled": true
+        },
+        "boa": {
+            "enabled": true
+        },
+        "kiesel": {
+            "enabled": true
+        },
+        "test262fyi": {
+            "enabled": true
+        },
+        "libjs": {
+            "enabled": true
+        }
     }
-  },
-  "defaultProfile": "rfast"
 }

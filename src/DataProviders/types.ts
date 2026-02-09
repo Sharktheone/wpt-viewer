@@ -2,7 +2,10 @@
  * Common types for all data providers
  */
 
+import type { ComponentType } from 'preact';
 import type { ShortStatusType } from '#/Wpt/Status';
+
+export type IconComponent = ComponentType<{ size?: number | string }>;
 
 /**
  * A compact test entry in the common format used by Tree
@@ -58,6 +61,24 @@ export interface ProviderOptions {
 }
 
 /**
+ * Definition for a configurable provider option
+ */
+export interface ProviderOptionDefinition {
+    /** Option key (matches ProviderOptions field) */
+    key: string;
+    /** Human-readable display name */
+    displayName: string;
+    /** Type of input control */
+    type: 'select' | 'text';
+    /** Optional icon for the selector */
+    icon?: IconComponent;
+    /** For select type: static available options */
+    options?: { value: string; label: string }[];
+    /** For select type: fetch options dynamically (for async loading) */
+    fetchOptions?: () => Promise<{ value: string; label: string }[]>;
+}
+
+/**
  * Available options that a provider supports
  */
 export interface ProviderCapabilities {
@@ -75,6 +96,8 @@ export interface ProviderCapabilities {
     supportsComparison: boolean;
     /** Whether the provider is read-only */
     isReadOnly: boolean;
+    /** Whether the provider supports interactive test reruns */
+    canRerun?: boolean;
 }
 
 /**
@@ -83,46 +106,72 @@ export interface ProviderCapabilities {
 export interface DataProvider {
     /** Unique identifier for this provider type */
     readonly id: string;
-    
+
     /** Display name for the provider */
     readonly displayName: string;
-    
+
     /** Description of what this provider does */
     readonly description: string;
-    
+
     /** Icon type for UI display */
-    readonly iconType: 'github' | 'server' | 'database' | 'cloud' | 'stone';
-    
+    readonly iconType: 'github' | 'server' | 'database' | 'cloud' | 'stone' | 'bug';
+
+    /**
+     * Get the icon component type for this provider (unsized)
+     * The UI layer will apply sizing when rendering
+     */
+    getIconType(): IconComponent;
+
+    /**
+     * Get configurable options for this provider with their metadata
+     * Used to render option controls in the UI
+     */
+    getOptionDefinitions(): ProviderOptionDefinition[];
+
     /**
      * Get the capabilities of this provider
      */
     getCapabilities(): Promise<ProviderCapabilities>;
-    
+
     /**
      * Get metadata about the current data source
      */
     getMetadata(): Promise<DataSourceMetadata>;
-    
+
     /**
      * Fetch all test results in the compact format
      */
     fetchResults(options?: ProviderOptions): Promise<CompactTestEntry[]>;
-    
+
     /**
      * Fetch details for a specific test
      * @param path - The test path
      */
     fetchTestDetails(path: string, options?: ProviderOptions): Promise<TestDetails | null>;
-    
+
     /**
      * Set options for this provider instance
      */
     setOptions(options: ProviderOptions): void;
-    
+
     /**
      * Get current options
      */
     getOptions(): ProviderOptions;
+}
+
+/**
+ * Default configuration for a data source
+ */
+export interface DataSourceDefaultConfig {
+    /** Display name */
+    name: string;
+    /** Default base URL */
+    baseUrl: string;
+    /** Description */
+    description: string;
+    /** Default options */
+    defaultOptions?: ProviderOptions;
 }
 
 /**

@@ -1,3 +1,5 @@
+import '#/DataProviders';
+
 import { render } from 'preact';
 import { App } from './Components/App.tsx';
 import { loadConfig, initializeSource } from './Config';

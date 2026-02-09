@@ -2,6 +2,7 @@ import { formatSeconds } from '#/Utils/Number.tsx';
 import { setDeep, followDeep } from '#/Utils/ObjectTree.tsx';
 import type { Fyi } from './Fyi.ts';
 import { ShortStatus, type ShortStatusType } from './Status.ts';
+import type { CompactTestEntry } from '#/DataProviders';
 
 export const TreeMeta = Symbol('TreeMeta');
 export const TreeMetaSubtest = Symbol('TreeMetaSubtest');
@@ -20,11 +21,6 @@ export interface EntryTree {
 
     [TreeMeta]: ITreeMeta;
     [TreeMetaSubtest]: [number, number];
-}
-
-interface Test262Entry {
-    s: ShortStatusType,
-    p: string,
 }
 
 interface NavigateParams {
@@ -70,7 +66,7 @@ export class Tree {
         return Object.fromEntries(ShortStatus.map(k => [k, 0])) as TreeStatusMap;
     }
 
-    static recomputeTestEntry(entry: Test262Entry): CompactEntry {
+    static recomputeTestEntry(entry: CompactTestEntry): CompactEntry {
         const status = entry.s;
 
         const pass = status === 'O' || status === 'P';
@@ -119,7 +115,7 @@ export class Tree {
 
     tree: EntryTree;
 
-    constructor(fyi: Fyi, flat: Test262Entry[]) {
+    constructor(fyi: Fyi, flat: CompactTestEntry[]) {
         const start = window.performance.now();
 
         // create the tree from the flat map

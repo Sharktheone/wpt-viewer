@@ -14,9 +14,14 @@ import type {
     CompactTestEntry,
     TestDetails,
     DataSourceMetadata,
+    DataSourceDefaultConfig,
+    ProviderOptionDefinition,
+    IconComponent,
 } from './types';
+import { Cloud } from 'lucide-preact';
+import { providerRegistry } from './registry';
 
-const DEFAULT_BASE_URL = 'https://test262-fyi.github.io/data';
+const DEFAULT_BASE_URL = 'https://data.test262.fyi';
 
 /**
  * test262.fyi index.json structure
@@ -100,6 +105,27 @@ export class Test262FyiDataProvider implements DataProvider {
         this.baseUrl = baseUrl || DEFAULT_BASE_URL;
     }
     
+    getIconType(): IconComponent {
+        return Cloud;
+    }
+    
+    getOptionDefinitions(): ProviderOptionDefinition[] {
+        return [
+            {
+                key: 'engine',
+                displayName: 'Engine',
+                type: 'select',
+                fetchOptions: async () => {
+                    const engines = await this.getAvailableEngines();
+                    return Object.entries(engines).map(([key, version]) => ({
+                        value: key,
+                        label: `${key} (${version})`,
+                    }));
+                },
+            },
+        ];
+    }
+    
     async getCapabilities(): Promise<ProviderCapabilities> {
         // Fetch available engines if not cached
         if (!this.cachedEngines) {
@@ -113,6 +139,7 @@ export class Test262FyiDataProvider implements DataProvider {
             hasTestDetails: false, // test262.fyi doesn't have individual test results
             supportsComparison: true,
             isReadOnly: true,
+            canRerun: false,
         };
     }
     
@@ -206,11 +233,27 @@ export class Test262FyiDataProvider implements DataProvider {
         }
         return this.cachedEngines || {};
     }
+    
+    static getDefaultConfig(): DataSourceDefaultConfig {
+        return {
+            name: 'test262.fyi',
+            baseUrl: DEFAULT_BASE_URL,
+            description: 'Aggregate test262 results from multiple JavaScript engines',
+            defaultOptions: {
+                engine: 'v8',
+            },
+        };
+    }
 }
 
-/**
- * Factory function for creating test262.fyi provider instances
- */
-export function createTest262FyiProvider(baseUrl?: string): DataProvider {
-    return new Test262FyiDataProvider(baseUrl);
-}
+// Self-register with the registry
+providerRegistry.register(
+    {
+        id: 'test262fyi',
+        displayName: 'test262.fyi',
+        description: 'Aggregate test262 results from multiple JavaScript engines',
+        factory: (baseUrl) => new Test262FyiDataProvider(baseUrl),
+        defaultBaseUrl: DEFAULT_BASE_URL,
+    },
+    Test262FyiDataProvider.getDefaultConfig()
+);

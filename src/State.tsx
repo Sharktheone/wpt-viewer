@@ -50,8 +50,6 @@ export {
     initializeSource,
     selectedEngine,
     selectedRef,
-    availableEngines,
-    availableRefs,
     setSelectedEngine,
     setSelectedRef,
     loadingProgress,

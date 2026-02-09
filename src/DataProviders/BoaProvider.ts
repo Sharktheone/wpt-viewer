@@ -10,8 +10,13 @@ import type {
     CompactTestEntry,
     TestDetails,
     DataSourceMetadata,
+    DataSourceDefaultConfig,
+    ProviderOptionDefinition,
+    IconComponent,
 } from './types';
 import type { ShortStatusType } from '#/Wpt/Status';
+import { Github, GitBranch } from 'lucide-preact';
+import { providerRegistry } from './registry';
 
 const DEFAULT_BASE_URL = 'https://raw.githubusercontent.com/boa-dev/data/main/test262';
 
@@ -106,6 +111,28 @@ export class BoaDataProvider implements DataProvider {
         this.baseUrl = baseUrl || DEFAULT_BASE_URL;
     }
     
+    getIconType(): IconComponent {
+        return Github;
+    }
+    
+    getOptionDefinitions(): ProviderOptionDefinition[] {
+        return [
+            {
+                key: 'ref',
+                displayName: 'Branch/Tag',
+                type: 'select',
+                icon: GitBranch,
+                fetchOptions: async () => {
+                    const refs = await this.fetchAvailableRefs();
+                    return refs.map(ref => ({
+                        value: ref,
+                        label: ref.replace('heads/', '').replace('tags/', ''),
+                    }));
+                },
+            },
+        ];
+    }
+    
     async getCapabilities(): Promise<ProviderCapabilities> {
         // Fetch available refs if not cached
         if (!this.cachedRefs) {
@@ -119,6 +146,7 @@ export class BoaDataProvider implements DataProvider {
             hasTestDetails: false, // Boa doesn't provide per-test details
             supportsComparison: true,
             isReadOnly: true,
+            canRerun: false,
         };
     }
     
@@ -198,7 +226,11 @@ export class BoaDataProvider implements DataProvider {
         return { ...this.options };
     }
     
-    private async fetchAvailableRefs(): Promise<void> {
+    private async fetchAvailableRefs(): Promise<string[]> {
+        if (this.cachedRefs) {
+            return this.cachedRefs;
+        }
+        
         try {
             // Fetch tags from GitHub API
             const tagsUrl = 'https://api.github.com/repos/boa-dev/data/contents/test262/refs/tags';
@@ -218,16 +250,31 @@ export class BoaDataProvider implements DataProvider {
             }
             
             this.cachedRefs = refs;
+            return refs;
         } catch (error) {
             console.error('Failed to fetch Boa refs:', error);
             this.cachedRefs = ['heads/main'];
+            return this.cachedRefs;
         }
+    }
+    
+    static getDefaultConfig(): DataSourceDefaultConfig {
+        return {
+            name: 'Boa (test262)',
+            baseUrl: DEFAULT_BASE_URL,
+            description: 'Test262 results from the Boa JavaScript engine',
+        };
     }
 }
 
-/**
- * Factory function for creating Boa provider instances
- */
-export function createBoaProvider(baseUrl?: string): DataProvider {
-    return new BoaDataProvider(baseUrl);
-}
+// Self-register with the registry
+providerRegistry.register(
+    {
+        id: 'boa',
+        displayName: 'Boa (test262)',
+        description: 'Test262 results from the Boa JavaScript engine',
+        factory: (baseUrl) => new BoaDataProvider(baseUrl),
+        defaultBaseUrl: DEFAULT_BASE_URL,
+    },
+    BoaDataProvider.getDefaultConfig()
+);

@@ -1,6 +1,7 @@
 import { signal, computed } from '@preact/signals';
+import { providerRegistry } from '#/DataProviders';
 
-export type DataSourceType = 'github' | 'local' | 'boa' | 'test262fyi' | 'libjs' | 'kiesel';
+export type DataSourceType = string;
 
 export interface LoadingProgress {
     fetched: number;
@@ -17,6 +18,8 @@ export interface DataSourceConfig {
     engine?: string;
     /** For boa: the selected ref (branch/tag) */
     ref?: string;
+    /** Whether this source is enabled */
+    enabled?: boolean;
 }
 
 export interface AppConfig {
@@ -78,51 +81,38 @@ export function saveProviderOptions(sourceKey: string, options: ProviderOptions)
     localStorage.setItem(`providerOptions:${sourceKey}`, JSON.stringify(options));
 }
 
-// Default config
+/**
+ * Build source configs from registry defaults
+ */
+function buildSourceConfigsFromRegistry(): Record<string, DataSourceConfig> {
+    const defaults = providerRegistry.getAllDefaultConfigs();
+    const sources: Record<string, DataSourceConfig> = {};
+
+    for (const [id, config] of Object.entries(defaults)) {
+        sources[id] = {
+            name: config.name,
+            type: id,
+            baseUrl: config.baseUrl,
+            description: config.description,
+            enabled: true,
+            ...config.defaultOptions,
+            ...getSavedProviderOptions(id),
+        };
+    }
+
+    // Override local URL with saved value
+    if (sources.local) {
+        sources.local.baseUrl = getSavedLocalUrl();
+    }
+
+    return sources;
+}
+
+// Default config - built from registry
 function getDefaultConfig(): AppConfig {
     return {
         defaultSource: 'github',
-        sources: {
-            github: {
-                name: 'GitHub (Yavashark)',
-                type: 'github',
-                baseUrl: 'https://raw.githubusercontent.com/Sharktheone/yavashark-data',
-                description: 'Read-only WPT results from Yavashark',
-            },
-            local: {
-                name: 'Local Server',
-                type: 'local',
-                baseUrl: getSavedLocalUrl(),
-                description: 'Local development server with rerun capabilities',
-            },
-            boa: {
-                name: 'Boa (test262)',
-                type: 'boa',
-                baseUrl: 'https://raw.githubusercontent.com/boa-dev/data/main/test262',
-                description: 'Test262 results from the Boa JavaScript engine',
-                ...getSavedProviderOptions('boa'),
-            },
-            kiesel: {
-              name: "Kiesel",
-              type: "kiesel",
-              baseUrl: "https://raw.codeberg.page/kiesel-js/kiesel/@main/tools/test262",
-              description: "Test262 results from the Kiesel JavaScript engine"
-            },
-            test262fyi: {
-                name: 'test262.fyi',
-                type: 'test262fyi',
-                baseUrl: 'https://data.test262.fyi',
-                description: 'Aggregate test262 results from multiple JS engines',
-                engine: getSavedProviderOptions('test262fyi').engine || 'v8',
-            },
-            
-            libjs: {
-                name: 'LibJS (test262)',
-                type: 'libjs',
-                baseUrl: 'https://raw.githubusercontent.com/LadybirdBrowser/libjs-data/refs/heads/master/test262',
-                description: 'Test262 results from LibJS (Ladybird)',
-            },
-        },
+        sources: buildSourceConfigsFromRegistry(),
         defaultProfile: localStorage.getItem('defaultProfile') || 'fast',
     };
 }
@@ -143,12 +133,6 @@ export const selectedEngine = signal<string>(
 export const selectedRef = signal<string>(
     localStorage.getItem('boa:ref') || 'heads/main'
 );
-
-// Available engines for test262fyi (loaded dynamically)
-export const availableEngines = signal<Record<string, string>>({});
-
-// Available refs for boa (loaded dynamically)
-export const availableRefs = signal<string[]>(['heads/main']);
 
 // Loading progress for long-running fetches (e.g., test262.fyi)
 export const loadingProgress = signal<LoadingProgress | null>(null);
@@ -177,9 +161,11 @@ export const activeSource = computed(() => {
     return config.sources[key] ?? null;
 });
 
-// Load configuration from config.json
+/**
+ * Load configuration from config.json
+ * Merges registry defaults with config.json overrides
+ */
 export async function loadConfig(url?: string): Promise<AppConfig> {
-    const savedLocalUrl = getSavedLocalUrl();
     const savedDefaultProfile = localStorage.getItem('defaultProfile') || '';
 
     try {
@@ -187,69 +173,32 @@ export async function loadConfig(url?: string): Promise<AppConfig> {
         if (!response.ok) {
             throw new Error(`Failed to load config: ${response.status}`);
         }
-        const config: AppConfig = await response.json();
+        const fileConfig = await response.json();
 
-        // Ensure we always have the core sources
-        if (!config.sources.github) {
-            config.sources.github = {
-                name: 'GitHub (Yavashark)',
-                type: 'github',
-                baseUrl: 'https://raw.githubusercontent.com/Sharktheone/yavashark-data',
-                description: 'Read-only WPT results from Yavashark',
-            };
-        }
-        if (!config.sources.local) {
-            config.sources.local = {
-                name: 'Local Server',
-                type: 'local',
-                baseUrl: savedLocalUrl,
-                description: 'Local development server with rerun capabilities',
-            };
-        } else {
-            // Override local URL with saved value
-            config.sources.local.baseUrl = savedLocalUrl;
-        }
-        
-        // Add new data providers if not present
-        if (!config.sources.boa) {
-            config.sources.boa = {
-                name: 'Boa (test262)',
-                type: 'boa',
-                baseUrl: 'https://raw.githubusercontent.com/boa-dev/data/main/test262',
-                description: 'Test262 results from the Boa JavaScript engine',
-                ...getSavedProviderOptions('boa'),
-            };
-        }
-        if (!config.sources.test262fyi) {
-            config.sources.test262fyi = {
-                name: 'test262.fyi',
-                type: 'test262fyi',
-                baseUrl: 'https://data.test262.fyi',
-                description: 'Aggregate test262 results from multiple JS engines',
-                engine: getSavedProviderOptions('test262fyi').engine || 'v8',
-            };
-        }
-        if (!config.sources.libjs) {
-            config.sources.libjs = {
-                name: 'LibJS (test262)',
-                type: 'libjs',
-                baseUrl: 'https://raw.githubusercontent.com/LadybirdBrowser/libjs-data/refs/heads/master/test262',
-                description: 'Test262 results from LibJS (Ladybird)',
-            };
-        }
-        
-        if (!config.sources.kiesel) {
-            config.sources.kiesel = {
-                name: "Kiesel",
-                type: "kiesel",
-                baseUrl: "https://raw.codeberg.page/kiesel-js/kiesel/@main/tools/test262",
-                description: "Test262 results from the Kiesel JavaScript engine"
-            };
+        // Start with registry defaults
+        const sources = buildSourceConfigsFromRegistry();
+
+        // Apply config.json overrides
+        if (fileConfig.sources) {
+            for (const [key, override] of Object.entries(fileConfig.sources)) {
+                if (sources[key]) {
+                    // Merge override into existing source
+                    sources[key] = {
+                        ...sources[key],
+                        ...(override as Partial<DataSourceConfig>),
+                    };
+                } else {
+                    // New source from config (for custom sources)
+                    sources[key] = override as DataSourceConfig;
+                }
+            }
         }
 
-        if (savedDefaultProfile) {
-            config.defaultProfile = savedDefaultProfile;
-        }
+        const config: AppConfig = {
+            defaultSource: fileConfig.defaultSource || 'github',
+            sources,
+            defaultProfile: savedDefaultProfile || fileConfig.defaultProfile || 'fast',
+        };
 
         appConfig.value = config;
 
@@ -261,7 +210,7 @@ export async function loadConfig(url?: string): Promise<AppConfig> {
         return config;
     } catch (error) {
         console.error('Failed to load config:', error);
-        // Keep using default config
+        // Keep using default config from registry
         return appConfig.value;
     }
 }
@@ -273,12 +222,12 @@ export function setActiveSource(key: string): void {
         console.error(`Unknown data source: ${key}`);
         return;
     }
-    
+
     // Only update and reset capabilities if source is actually changing
     if (activeSourceKey.value === key) {
         return; // Same source, no need to reset capabilities
     }
-    
+
     activeSourceKey.value = key;
     localStorage.setItem('dataSource', key);
 
@@ -294,7 +243,7 @@ export function setActiveSource(key: string): void {
 export function setSelectedEngine(engine: string): void {
     selectedEngine.value = engine;
     localStorage.setItem('test262fyi:engine', engine);
-    
+
     // Update the source config
     const config = appConfig.value;
     if (config.sources.test262fyi) {
@@ -307,7 +256,7 @@ export function setSelectedEngine(engine: string): void {
 export function setSelectedRef(ref: string): void {
     selectedRef.value = ref;
     localStorage.setItem('boa:ref', ref);
-    
+
     // Update the source config
     const config = appConfig.value;
     if (config.sources.boa) {
