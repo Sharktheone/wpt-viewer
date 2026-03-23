@@ -3,7 +3,16 @@ import { Save } from 'lucide-preact';
 import { Button } from '../Ui/Button';
 import { Select } from '../Ui/Select';
 import { settings, profiles, appConfig, type TestSortMode } from '#/State';
+import { ShortStatus, type ShortStatusType } from '#/Wpt/Status';
+import { StatusStyleMap } from '#/StatusStyle';
+import { MultiSelect, type MultiSelectOption } from '../Ui/MultiSelect';
 import { useComputed, useSignal } from '@preact/signals';
+
+const statusOptions: MultiSelectOption[] = ShortStatus.map(s => ({
+    value: s,
+    label: StatusStyleMap[s].label,
+    color: StatusStyleMap[s].color,
+}));
 
 export function Settings() {
     const localUrl = useSignal(
@@ -13,6 +22,7 @@ export function Settings() {
         localStorage.getItem('defaultProfile') || appConfig.value?.defaultProfile || ''
     );
     const testSortMode = useSignal<TestSortMode>(settings.testSortMode.value);
+    const successStatuses = useSignal<Set<ShortStatusType>>(new Set(settings.successStatuses.value));
 
     const profileOptions = useComputed(() => {
         const profilesData = profiles.value;
@@ -41,6 +51,8 @@ export function Settings() {
 
         const sortMode = form.get('testSortMode') as TestSortMode;
         settings.testSortMode.value = sortMode;
+
+        settings.successStatuses.value = [...successStatuses.value];
 
         if (appConfig.value) {
             appConfig.value = {
@@ -79,6 +91,16 @@ export function Settings() {
                     <option value="failed">Failed tests</option>
                 </Select>
                 <input type="hidden" name="testSortMode" value={testSortMode.value} />
+            </label>
+
+            <label>
+                <span>Count as success</span>
+                <MultiSelect
+                    options={statusOptions}
+                    selected={successStatuses.value}
+                    onChange={(next) => { successStatuses.value = next as Set<ShortStatusType>; }}
+                    placeholder='None selected'
+                />
             </label>
         </fieldset>
 

@@ -66,10 +66,10 @@ export class Tree {
         return Object.fromEntries(ShortStatus.map(k => [k, 0])) as TreeStatusMap;
     }
 
-    static recomputeTestEntry(entry: CompactTestEntry): CompactEntry {
+    static recomputeTestEntry(entry: CompactTestEntry, successStatuses: Set<ShortStatusType>): CompactEntry {
         const status = entry.s;
 
-        const pass = status === 'O' || status === 'P';
+        const pass = successStatuses.has(status);
 
         return {
             s: status,
@@ -77,7 +77,7 @@ export class Tree {
         };
     }
 
-    static populateMetadata(parent: EntryTree) {
+    static populateMetadata(parent: EntryTree, successStatuses: Set<ShortStatusType>) {
         const stats = Tree.emptyStatusMap();
         let passedTests = 0;
         let totalTests = 0;
@@ -86,7 +86,7 @@ export class Tree {
             if (value instanceof PartialEntry) {
                 // entry
                 totalTests += value.totalTests;
-                if (value.status === 'O' || value.status === 'P') {
+                if (successStatuses.has(value.status)) {
                     if (value.status === 'P' && value.totalTests === 0) {
                         passedTests += 1;
                     } else {
@@ -97,7 +97,7 @@ export class Tree {
                 stats[value.status] += 1;
             } else {
                 // directory
-                Tree.populateMetadata(value);
+                Tree.populateMetadata(value, successStatuses);
 
                 for (const sk in value[TreeMeta]) {
                     // @ts-ignore
@@ -115,7 +115,7 @@ export class Tree {
 
     tree: EntryTree;
 
-    constructor(fyi: Fyi, flat: CompactTestEntry[]) {
+    constructor(fyi: Fyi, flat: CompactTestEntry[], successStatuses: Set<ShortStatusType>) {
         const start = window.performance.now();
 
         // create the tree from the flat map
@@ -124,7 +124,7 @@ export class Tree {
             const key = entry.p;
 
             // Compute pass status from the entry
-            const computed = Tree.recomputeTestEntry(entry);
+            const computed = Tree.recomputeTestEntry(entry, successStatuses);
             const status = computed.s;
             const [passedTests, totalTests] = computed.c;
 
@@ -145,7 +145,7 @@ export class Tree {
         }
 
         // populate metadata
-        Tree.populateMetadata(tree);
+        Tree.populateMetadata(tree, successStatuses);
 
         this.tree = tree;
 

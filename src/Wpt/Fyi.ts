@@ -1,4 +1,4 @@
-import type { LongStatusType } from './Status';
+import type { LongStatusType, ShortStatusType } from './Status';
 import { Tree } from './Tree';
 import { activeSource, selectedEngine, selectedRef, loadingProgress, type DataSourceConfig, type LoadingProgress } from '#/Config';
 import { providerRegistry, type CompactTestEntry } from '#/DataProviders';
@@ -175,9 +175,9 @@ export class Fyi {
         } as FullEntry;
     }
 
-    async getTree() {
+    async getTree(successStatuses: Set<ShortStatusType>) {
         const data = await this.#get('results');
-        return new Tree(this, data);
+        return new Tree(this, data, successStatuses);
     }
 }
 

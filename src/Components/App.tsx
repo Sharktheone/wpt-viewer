@@ -88,9 +88,10 @@ export function App() {
     useSignalEffect(() => {
         const currentFyi = fyi.value;
         void treeRefreshCounter.value;
+        const successStatuses = new Set(settings.successStatuses.value);
         tree.value = null;
 
-        currentFyi.getTree()
+        currentFyi.getTree(successStatuses)
             .then(t => {
                 tree.value = t;
             })
