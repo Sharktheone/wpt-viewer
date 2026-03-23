@@ -21,6 +21,8 @@ export interface EntryTree {
 
     [TreeMeta]: ITreeMeta;
     [TreeMetaSubtest]: [number, number];
+    /** If true, this directory contains synthetic pass_XX/fail_XX entries that can be lazy-loaded */
+    [SyntheticEntries]?: boolean;
 }
 
 interface NavigateParams {
@@ -60,6 +62,9 @@ export class PartialEntry {
         return await this.#fyi.getTestDetails(this.path);
     }
 }
+
+/** Symbol to mark entries that are synthetic (pass_XX/fail_XX) and can be lazy-loaded */
+export const SyntheticEntries = Symbol('SyntheticEntries');
 
 export class Tree {
     static emptyStatusMap() {
@@ -113,10 +118,17 @@ export class Tree {
         }
     }
 
+    /** Check if an entry name is a synthetic pass_XX/fail_XX name */
+    static isSyntheticEntryName(name: string): boolean {
+        return /^(?:pass|fail)_\d+$/.test(name);
+    }
+
     tree: EntryTree;
+    #fyi: Fyi;
 
     constructor(fyi: Fyi, flat: CompactTestEntry[], successStatuses: Set<ShortStatusType>) {
         const start = window.performance.now();
+        this.#fyi = fyi;
 
         // create the tree from the flat map
         const tree = Object.create(null);
@@ -144,8 +156,9 @@ export class Tree {
             setDeep(tree, path, partialEntry);
         }
 
-        // populate metadata
+        // populate metadata and mark directories with synthetic entries
         Tree.populateMetadata(tree, successStatuses);
+        this.markSyntheticDirectories(tree);
 
         this.tree = tree;
 
@@ -157,6 +170,148 @@ export class Tree {
             console.log(`took ${formatSeconds(taken)}`);
             console.groupEnd();
         }
+    }
+
+    /**
+     * Mark directories that contain synthetic pass_XX/fail_XX entries
+     * These directories can be lazy-loaded to get real test names
+     */
+    private markSyntheticDirectories(tree: EntryTree): void {
+        for (const [key, value] of Object.entries(tree)) {
+            if (value instanceof PartialEntry) {
+                // Check if this is a synthetic entry
+                if (Tree.isSyntheticEntryName(key)) {
+                    tree[SyntheticEntries] = true;
+                }
+            } else {
+                // Recurse into subdirectories
+                this.markSyntheticDirectories(value);
+            }
+        }
+    }
+
+    /**
+     * Check if a directory at the given path has synthetic entries that can be lazy-loaded
+     */
+    hasSyntheticEntries(path: string[]): boolean {
+        const branch = followDeep(this.tree, path);
+        if (!branch || branch instanceof PartialEntry) {
+            return false;
+        }
+        return !!(branch as EntryTree)[SyntheticEntries];
+    }
+
+    /**
+     * Lazy-load real test names for a directory, replacing synthetic entries
+     * Returns true if entries were loaded, false if not supported or on error
+     */
+    async lazyLoadDirectory(path: string[]): Promise<boolean> {
+        const provider = this.#fyi.getProvider();
+        if (!provider?.fetchDirectoryContents) {
+            return false;
+        }
+
+        const branch = followDeep(this.tree, path);
+        if (!branch || branch instanceof PartialEntry) {
+            return false;
+        }
+
+        const dirTree = branch as EntryTree;
+        if (!dirTree[SyntheticEntries]) {
+            return false; // Already loaded or not synthetic
+        }
+
+        try {
+            const dirPath = path.join('/');
+            const entries = await provider.fetchDirectoryContents(dirPath);
+
+            if (entries.length === 0) {
+                return false;
+            }
+
+            // Remove synthetic entries from the directory
+            for (const key of Object.keys(dirTree)) {
+                if (Tree.isSyntheticEntryName(key)) {
+                    delete dirTree[key];
+                }
+            }
+
+            // Add real entries
+            for (const entry of entries) {
+                const computed = Tree.recomputeTestEntry(entry);
+                const status = computed.s;
+                const [passedTests, totalTests] = computed.c;
+
+                const partialEntry = new PartialEntry(
+                    this.#fyi,
+                    entry.p,
+                    {
+                        status,
+                        passedTests,
+                        totalTests,
+                    },
+                );
+
+                // Parse the path and add to proper location in tree
+                // Entry paths from fetchDirectoryContents are relative to the directory being loaded
+                // e.g., for loading "built-ins", entries might be "built-ins/Array/test.js"
+                // We need to create the nested structure within dirTree
+                const parts = entry.p.split('/');
+                const dirPath = path.join('/');
+                const relativeParts: string[] = [];
+
+                // Find the parts that are relative to the current directory
+                let foundDir = false;
+                for (let i = 0; i < parts.length; i++) {
+                    const partial = parts.slice(0, i + 1).join('/');
+                    if (partial === dirPath) {
+                        foundDir = true;
+                        continue;
+                    }
+                    if (foundDir) {
+                        relativeParts.push(parts[i]);
+                    }
+                }
+
+                if (relativeParts.length === 0) {
+                    // Entry is directly in this directory
+                    const filename = parts[parts.length - 1];
+                    dirTree[filename] = partialEntry;
+                } else {
+                    // Entry is in a subdirectory - use setDeep to create nested structure
+                    setDeep(dirTree, relativeParts, partialEntry);
+                }
+            }
+
+            // Clear synthetic marker and recalculate metadata
+            delete dirTree[SyntheticEntries];
+            Tree.populateMetadata(dirTree);
+
+            // Re-populate parent metadata up the tree
+            this.recalculateParentMetadata(path);
+
+            console.log(`Lazy-loaded ${entries.length} tests for ${dirPath}`);
+            return true;
+        } catch (error) {
+            console.error(`Failed to lazy-load directory ${path.join('/')}:`, error);
+            return false;
+        }
+    }
+
+    /**
+     * Recalculate metadata for parent directories after lazy-loading
+     */
+    private recalculateParentMetadata(path: string[]): void {
+        // Walk up the tree and recalculate metadata
+        for (let i = path.length - 1; i >= 0; i--) {
+            const parentPath = path.slice(0, i);
+            const parent = followDeep(this.tree, parentPath);
+            if (parent && !(parent instanceof PartialEntry)) {
+                Tree.populateMetadata(parent as EntryTree);
+            }
+        }
+        // Also recalculate root
+        Tree.populateMetadata(this.tree);
     }
 
     statusCount() {

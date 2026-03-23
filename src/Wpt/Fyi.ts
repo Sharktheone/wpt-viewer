@@ -83,6 +83,13 @@ export class Fyi {
         const sourceType = this.#source.type;
         return providerRegistry.getInstance(sourceType, this.baseUrl);
     }
+    
+    /**
+     * Get the provider instance (public accessor for lazy-loading)
+     */
+    getProvider() {
+        return this.#getProvider();
+    }
 
     /**
      * Fetch test results from the current source

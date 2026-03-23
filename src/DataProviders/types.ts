@@ -150,6 +150,13 @@ export interface DataProvider {
     fetchTestDetails(path: string, options?: ProviderOptions): Promise<TestDetails | null>;
 
     /**
+     * Fetch contents of a specific directory (for lazy-loading providers)
+     * Returns null if the provider doesn't support directory-level fetching
+     * @param path - The directory path (e.g., "language/annexB")
+     */
+    fetchDirectoryContents?(path: string, options?: ProviderOptions): Promise<CompactTestEntry[]>;
+
+    /**
      * Set options for this provider instance
      */
     setOptions(options: ProviderOptions): void;

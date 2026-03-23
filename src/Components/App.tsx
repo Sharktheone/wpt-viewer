@@ -41,6 +41,8 @@ export function App() {
     const statusFilters: FilterMap = createSignalStatusMap();
     const search = useSignal('');
     const tree = useSignal<Tree|null>(null);
+    /** Track which paths have been lazy-loaded to avoid re-triggering */
+    const lazyLoadedPaths = useSignal<Set<string>>(new Set());
 
     const entryOrEntryTree = useComputed(() =>
         tree.value?.navigate(globalPath.value, {
@@ -85,11 +87,51 @@ export function App() {
         search.value = '';
     });
 
+    // Lazy-load test names when navigating to a directory with synthetic entries
+    useSignalEffect(() => {
+        const currentTree = tree.value;
+        const path = globalPath.value;
+        const pathStr = path.join('/');
+        
+        if (!currentTree) return;
+        
+        // Skip if already lazy-loaded for this path
+        if (lazyLoadedPaths.value.has(pathStr)) return;
+        
+        // Check if this directory has synthetic entries that need lazy-loading
+        if (currentTree.hasSyntheticEntries(path)) {
+            // Mark as loaded immediately to prevent duplicate requests
+            lazyLoadedPaths.value = new Set(lazyLoadedPaths.value).add(pathStr);
+            
+            currentTree.lazyLoadDirectory(path)
+                .then((success) => {
+                    if (success) {
+                        // Trigger re-render by reassigning the tree
+                        // This is needed because lazyLoadDirectory modifies the tree in place
+                        tree.value = currentTree;
+                    } else {
+                        // Remove from loaded set if failed
+                        const newSet = new Set(lazyLoadedPaths.value);
+                        newSet.delete(pathStr);
+                        lazyLoadedPaths.value = newSet;
+                    }
+                })
+                .catch(err => {
+                    console.error('Failed to lazy-load directory:', err);
+                    // Remove from loaded set on error
+                    const newSet = new Set(lazyLoadedPaths.value);
+                    newSet.delete(pathStr);
+                    lazyLoadedPaths.value = newSet;
+                });
+        }
+    });
+
     useSignalEffect(() => {
         const currentFyi = fyi.value;
         void treeRefreshCounter.value;
         const successStatuses = new Set(settings.successStatuses.value);
         tree.value = null;
+        lazyLoadedPaths.value = new Set(); // Clear lazy-load cache on tree refresh
 
         currentFyi.getTree(successStatuses)
             .then(t => {
