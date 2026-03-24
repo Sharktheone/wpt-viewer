@@ -44,7 +44,98 @@ export interface FullEntry extends Subtest {
     run: Run;
 }
 
+// ===== test262.fyi Provider Types =====
+export interface Test262FyiNode {
+    total: number;
+    engines: Record<string, number>;
+    files?: Record<string, Test262FyiNode>;
+}
+
+// Cache for test262.fyi JSON files to avoid refetching on engine change
+const test262FyiCache = new Map<string, Test262FyiNode>();
+
+/**
+ * Fetch a test262.fyi JSON file with caching
+ */
+async function fetchTest262FyiJson(baseUrl: string, path: string): Promise<Test262FyiNode | null> {
+    const cacheKey = `${baseUrl}|${path}`;
+    if (test262FyiCache.has(cacheKey)) {
+        return test262FyiCache.get(cacheKey)!;
+    }
+
+    try {
+        const url = path ? `${baseUrl}/${path}.json` : `${baseUrl}/index.json`;
+        const response = await fetch(url);
+        if (!response.ok) return null;
+        const data = await response.json();
+        test262FyiCache.set(cacheKey, data);
+        return data;
+    } catch {
+        return null;
+    }
+}
+
 export type ProgressCallback = (progress: LoadingProgress) => void;
+
+/**
+ * Recursively fetch test262.fyi data and extract per-file results.
+ * Used by CompareState for full comparisons (not the main tree view).
+ */
+export async function fetchAllTest262FyiData(
+    baseUrl: string,
+    engine: string,
+    onProgress?: ProgressCallback
+): Promise<CompactTestEntry[]> {
+    const results: CompactTestEntry[] = [];
+    const fetchedPaths = new Set<string>();
+
+    // Queue of paths to fetch (without .json extension)
+    const queue: string[] = [''];
+    let totalDiscovered = 1; // Start with root
+    let fetchedCount = 0;
+
+    while (queue.length > 0) {
+        // Fetch in batches of 20 for parallel requests
+        const batch = queue.splice(0, 20);
+        const fetches = batch.map(async (path) => {
+            if (fetchedPaths.has(path)) return;
+            fetchedPaths.add(path);
+
+            const data = await fetchTest262FyiJson(baseUrl, path);
+            fetchedCount++;
+
+            // Report progress
+            onProgress?.({
+                fetched: fetchedCount,
+                total: totalDiscovered,
+                phase: queue.length > 0 ? 'discovering' : 'fetching',
+            });
+
+            if (!data?.files) return;
+
+            for (const [name, child] of Object.entries(data.files)) {
+                // If it's a .js file, it's a test
+                if (name.endsWith('.js')) {
+                    const passed = (child.engines[engine] || 0) > 0;
+                    results.push({
+                        p: name,
+                        s: passed ? 'P' : 'F',
+                    });
+                } else {
+                    // It's a directory - queue it for fetching if not already fetched
+                    if (!fetchedPaths.has(name)) {
+                        queue.push(name);
+                        totalDiscovered++;
+                    }
+                }
+            }
+        });
+
+        await Promise.all(fetches);
+    }
+
+    return results;
+}
 
 /**
  * Fyi class - facade for data fetching operations
@@ -83,7 +174,7 @@ export class Fyi {
         const sourceType = this.#source.type;
         return providerRegistry.getInstance(sourceType, this.baseUrl);
     }
-    
+
     /**
      * Get the provider instance (public accessor for lazy-loading)
      */
@@ -183,8 +274,29 @@ export class Fyi {
     }
 
     async getTree(successStatuses: Set<ShortStatusType>) {
+        if (this.#source.type === 'test262fyi') {
+            return this.#getLazyTest262FyiTree(successStatuses);
+        }
         const data = await this.#get('results');
         return new Tree(this, data, successStatuses);
+    }
+
+    async #getLazyTest262FyiTree(successStatuses: Set<ShortStatusType>): Promise<Tree> {
+        const engine = this.#source.engine || selectedEngine.value || 'v8';
+        const indexData = await fetchTest262FyiJson(this.#source.baseUrl, '');
+        if (!indexData?.files) {
+            throw new Error('Failed to fetch test262.fyi index data');
+        }
+        return Tree.fromTest262FyiRoot(this, indexData.files, engine, successStatuses);
+    }
+
+    /**
+     * Load a single directory's children from test262.fyi (for lazy loading).
+     * Returns the node data, or null on failure.
+     */
+    async loadLazyDirectory(path: string): Promise<Test262FyiNode | null> {
+        if (this.#source.type !== 'test262fyi') return null;
+        return fetchTest262FyiJson(this.#source.baseUrl, path);
     }
 }
 

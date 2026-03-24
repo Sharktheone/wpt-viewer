@@ -6,7 +6,7 @@ import { type FilterMap, StatusSelector } from './StatusSelector.tsx';
 import { Search } from 'lucide-preact';
 import { Header } from './Header.tsx';
 import { Suspense } from './Ui/Throbber.tsx';
-import { PartialEntry, type EntryTree, type Tree } from '#/Wpt/Tree.ts';
+import { PartialEntry, LazyChildren, Tree, type EntryTree } from '#/Wpt/Tree.ts';
 import { TestList } from './TestList/Component.tsx';
 import { type Signal, useComputed, useSignal, useSignalEffect } from '@preact/signals';
 import { TestView } from './TestView/Component.tsx';
@@ -15,7 +15,7 @@ import { ShortStatus, type ShortStatusType } from '#/Wpt/Status.ts';
 import { NotFound } from './NotFound.tsx';
 import { globalPath, page } from '#/Routing.tsx';
 import { Settings } from './Pages/Settings.tsx';
-import { settings, activeSource, initializeSource, treeRefreshCounter } from '#/State.tsx';
+import { settings, activeSource, selectedEngine, initializeSource, treeRefreshCounter } from '#/State.tsx';
 import { RerunModal } from './RerunModal.tsx';
 import { CompareView } from './CompareView.tsx';
 import { HistoryDetailView } from './HistoryDetailView.tsx';
@@ -41,15 +41,16 @@ export function App() {
     const statusFilters: FilterMap = createSignalStatusMap();
     const search = useSignal('');
     const tree = useSignal<Tree|null>(null);
-    /** Track which paths have been lazy-loaded to avoid re-triggering */
-    const lazyLoadedPaths = useSignal<Set<string>>(new Set());
+    const lazyLoadVersion = useSignal(0);
+    const isLazyLoading = useSignal(false);
 
-    const entryOrEntryTree = useComputed(() =>
-        tree.value?.navigate(globalPath.value, {
+    const entryOrEntryTree = useComputed(() => {
+        void lazyLoadVersion.value; // re-render when lazy children are loaded
+        return tree.value?.navigate(globalPath.value, {
             search: search.value,
             statuses: unwrapSignalStatusMap(statusFilters),
-        })
-    );
+        });
+    });
 
     const headIsEntry = useComputed(() =>
         entryOrEntryTree.value instanceof PartialEntry
@@ -60,7 +61,16 @@ export function App() {
             return <Settings />
         }
 
-        if (page.value === 'not-found' || tree.value && !entryOrEntryTree.value) {
+        if (page.value === 'not-found') {
+            return <NotFound />
+        }
+
+        // Show loading spinner while lazy-loading directory contents
+        if (isLazyLoading.value) {
+            return null;
+        }
+
+        if (tree.value && !entryOrEntryTree.value) {
             return <NotFound />
         }
 
@@ -68,6 +78,12 @@ export function App() {
             return <TestView
                 test={entryOrEntryTree as Signal<PartialEntry>}
             />
+        }
+
+        // Check if the current view is a lazy directory (children not yet loaded)
+        const result = entryOrEntryTree.value;
+        if (result && !(result instanceof PartialEntry) && result[LazyChildren]) {
+            return null; // show spinner via Suspense
         }
 
         return <TestList
@@ -87,43 +103,65 @@ export function App() {
         search.value = '';
     });
 
-    // Lazy-load test names when navigating to a directory with synthetic entries
+    // Lazy loading effect for test262.fyi directories
     useSignalEffect(() => {
         const currentTree = tree.value;
+        const currentFyi = fyi.value;
+        if (!currentTree || currentFyi.source.type !== 'test262fyi') return;
+
+        void lazyLoadVersion.value; // re-run when children are inserted
         const path = globalPath.value;
-        const pathStr = path.join('/');
-        
-        if (!currentTree) return;
-        
-        // Skip if already lazy-loaded for this path
-        if (lazyLoadedPaths.value.has(pathStr)) return;
-        
-        // Check if this directory has synthetic entries that need lazy-loading
-        if (currentTree.hasSyntheticEntries(path)) {
-            // Mark as loaded immediately to prevent duplicate requests
-            lazyLoadedPaths.value = new Set(lazyLoadedPaths.value).add(pathStr);
-            
-            currentTree.lazyLoadDirectory(path)
-                .then((success) => {
-                    if (success) {
-                        // Trigger re-render by reassigning the tree
-                        // This is needed because lazyLoadDirectory modifies the tree in place
-                        tree.value = currentTree;
-                    } else {
-                        // Remove from loaded set if failed
-                        const newSet = new Set(lazyLoadedPaths.value);
-                        newSet.delete(pathStr);
-                        lazyLoadedPaths.value = newSet;
-                    }
-                })
-                .catch(err => {
-                    console.error('Failed to lazy-load directory:', err);
-                    // Remove from loaded set on error
-                    const newSet = new Set(lazyLoadedPaths.value);
-                    newSet.delete(pathStr);
-                    lazyLoadedPaths.value = newSet;
-                });
+
+        // Check if any directory along the current path needs loading
+        const lazyIdx = currentTree.findFirstLazyAncestor(path);
+        if (lazyIdx < 0) return;
+
+        isLazyLoading.value = true;
+
+        // Compute all directory paths that may need fetching (from first lazy to target)
+        const pathsToFetch: string[] = [];
+        for (let i = lazyIdx === 0 ? 1 : lazyIdx; i <= path.length; i++) {
+            pathsToFetch.push(path.slice(0, i).join('/'));
         }
+
+        // Fetch all needed directories in parallel (cached if already fetched)
+        Promise.all(pathsToFetch.map(p => currentFyi.loadLazyDirectory(p)))
+            .then(results => {
+                const engine = currentFyi.source.engine || selectedEngine.value || 'v8';
+                let changed = false;
+
+                // Insert in order (parent before child)
+                for (let i = 0; i < results.length; i++) {
+                    const data = results[i];
+                    if (!data?.files) continue;
+
+                    const subpathIdx = lazyIdx === 0 ? i + 1 : lazyIdx + i;
+                    const subpath = path.slice(0, subpathIdx);
+
+                    // Only insert if this node is still lazy
+                    const node = currentTree.navigate(subpath);
+                    if (node && !(node instanceof PartialEntry) && node[LazyChildren]) {
+                        Tree.insertLazyChildren(
+                            currentTree.tree,
+                            subpath,
+                            data.files,
+                            engine,
+                            currentFyi,
+                        );
+                        changed = true;
+                    }
+                }
+
+                // Clear loading state before bumping version so signals batch together
+                isLazyLoading.value = false;
+                if (changed) {
+                    lazyLoadVersion.value++;
+                }
+            })
+            .catch(err => {
+                console.error('Failed to lazy-load directory:', err);
+                isLazyLoading.value = false;
+            });
     });
 
     useSignalEffect(() => {
@@ -131,7 +169,6 @@ export function App() {
         void treeRefreshCounter.value;
         const successStatuses = new Set(settings.successStatuses.value);
         tree.value = null;
-        lazyLoadedPaths.value = new Set(); // Clear lazy-load cache on tree refresh
 
         currentFyi.getTree(successStatuses)
             .then(t => {
@@ -157,7 +194,7 @@ export function App() {
             <StatusSelector filters={statusFilters} />
         </div>
 
-        <Suspense until={tree}>
+        <Suspense until={tree} loading={isLazyLoading}>
             {suspenseContent}
         </Suspense>
 

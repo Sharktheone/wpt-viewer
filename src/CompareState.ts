@@ -1,6 +1,7 @@
 import { signal, computed } from '@preact/signals';
 import { activeSource, selectedEngine, selectedRef } from './Config';
 import { backendHistory, fetchHistory, type BackendRunHistoryEntry } from './RerunState';
+import { fetchAllTest262FyiData } from './Wpt/Fyi';
 
 // GitHub constants for yavashark-data repo
 const DATA_REPO_OWNER = 'Sharktheone';
@@ -360,63 +361,18 @@ async function fetchBoaResults(ref?: string): Promise<Map<string, string>> {
 
 // ===== test262.fyi Data Provider =====
 
-interface Test262FyiIndex {
-    total: number;
-    engines: Record<string, number>;
-    files: Record<string, Test262FyiCategory>;
-}
-
-interface Test262FyiCategory {
-    total: number;
-    engines: Record<string, number>;
-    files?: Record<string, Test262FyiCategory>;
-}
-
-function flattenTest262FyiForCompare(
-    data: Test262FyiIndex,
-    engine: string
-): Map<string, string> {
-    const results = new Map<string, string>();
-    
-    function processCategory(category: Test262FyiCategory, path: string[]): void {
-        const passed = category.engines[engine] || 0;
-        const total = category.total;
-        const failed = total - passed;
-        const categoryPath = path.join('/');
-        
-        if (category.files && Object.keys(category.files).length > 0) {
-            for (const [name, subCategory] of Object.entries(category.files)) {
-                processCategory(subCategory, [...path, name]);
-            }
-        } else {
-            // Leaf category - create pass/fail entries
-            for (let i = 0; i < passed; i++) {
-                results.set(`${categoryPath}/pass_${String(i + 1).padStart(5, '0')}`, 'PASS');
-            }
-            for (let i = 0; i < failed; i++) {
-                results.set(`${categoryPath}/fail_${String(i + 1).padStart(5, '0')}`, 'FAIL');
-            }
-        }
-    }
-    
-    for (const [name, category] of Object.entries(data.files)) {
-        processCategory(category, [name]);
-    }
-    
-    return results;
-}
-
 async function fetchTest262FyiResults(engine?: string): Promise<Map<string, string>> {
     const selectedEngineName = engine || selectedEngine.value || 'v8';
-    const url = `${TEST262FYI_BASE}/index.json`;
-    
-    const res = await fetch(url);
-    if (!res.ok) {
-        throw new Error(`Failed to fetch test262.fyi results: ${res.status}`);
+    const baseUrl = activeSource.value?.type === 'test262fyi'
+        ? activeSource.value.baseUrl
+        : TEST262FYI_BASE;
+
+    const entries = await fetchAllTest262FyiData(baseUrl, selectedEngineName);
+    const results = new Map<string, string>();
+    for (const entry of entries) {
+        results.set(entry.p, entry.s === 'P' ? 'PASS' : 'FAIL');
     }
-    
-    const data: Test262FyiIndex = await res.json();
-    return flattenTest262FyiForCompare(data, selectedEngineName);
+    return results;
 }
 
 // Calculate status counts from results

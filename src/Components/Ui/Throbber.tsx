@@ -6,15 +6,20 @@ import { loadingProgress } from '#/State';
 
 interface SuspenseAttributes {
     until: any;
+    loading?: Signal<boolean>;
     children?: ComponentChildren;
 }
 
-export function Suspense({ until, children }: SuspenseAttributes) {
+export function Suspense({ until, loading, children }: SuspenseAttributes) {
     if (until instanceof Signal) {
         until = until.value;
     }
 
     if (!until) {
+        return <Throbber />
+    }
+
+    if (loading instanceof Signal && loading.value) {
         return <Throbber />
     }
 
