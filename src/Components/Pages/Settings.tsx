@@ -18,6 +18,9 @@ export function Settings() {
     const localUrl = useSignal(
         localStorage.getItem('localServerUrl') || 'http://localhost:1215'
     );
+    const testFileBaseUrl = useSignal(
+        localStorage.getItem('testFileBaseUrl') || appConfig.value?.testFileBaseUrl || 'github'
+    );
     const defaultProfile = useSignal(
         localStorage.getItem('defaultProfile') || appConfig.value?.defaultProfile || ''
     );
@@ -45,6 +48,10 @@ export function Settings() {
             localUrl.value = url;
         }
 
+        const testFileBase = form.get('testFileBaseUrl') as string;
+        localStorage.setItem('testFileBaseUrl', testFileBase);
+        testFileBaseUrl.value = testFileBase;
+
         const profile = form.get('defaultProfile') as string;
         localStorage.setItem('defaultProfile', profile);
         defaultProfile.value = profile;
@@ -58,6 +65,7 @@ export function Settings() {
             appConfig.value = {
                 ...appConfig.value,
                 defaultProfile: profile,
+                testFileBaseUrl: testFileBase,
                 sources: {
                     ...appConfig.value.sources,
                     local: {
@@ -115,6 +123,17 @@ export function Settings() {
                     value={localUrl.value}
                     placeholder='http://localhost:1215'
                     onInput={(e) => { localUrl.value = (e.target as HTMLInputElement).value; }}
+                />
+            </label>
+
+            <label>
+                <span>Test File Base URL</span>
+                <input
+                    type='text'
+                    name='testFileBaseUrl'
+                    value={testFileBaseUrl.value}
+                    placeholder='github, local, or https://.../'
+                    onInput={(e) => { testFileBaseUrl.value = (e.target as HTMLInputElement).value; }}
                 />
             </label>
 

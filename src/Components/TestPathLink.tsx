@@ -1,6 +1,7 @@
 import '#/Style/components/TestPathLink.scss';
 
 import { ExternalLink, FileText } from 'lucide-preact';
+import { getTestFileUrl } from '#/Config';
 import { openTestOutputModal } from './TestOutputModal';
 
 export interface TestPathLinkProps {
@@ -27,10 +28,10 @@ function stripPathPrefix(path: string): string {
     return path;
 }
 
-// Get GitHub URL for a test
-function getGitHubUrl(path: string): string {
+// Get configured external URL for a test
+function getExternalTestUrl(path: string): string {
     const cleanPath = stripPathPrefix(path);
-    return `https://github.com/tc39/test262/blob/main/test/${cleanPath}`;
+    return getTestFileUrl(cleanPath);
 }
 
 // Get navigation path for the test view
@@ -42,7 +43,7 @@ function getTestViewPath(path: string): string {
 export function TestPathLink({ path, status, message, showActions = true, variant = 'default' }: TestPathLinkProps) {
     const cleanPath = stripPathPrefix(path);
     const testViewPath = getTestViewPath(path);
-    const githubUrl = getGitHubUrl(path);
+    const externalTestUrl = getExternalTestUrl(path);
     const isSmall = variant === 'compact' || variant === 'inline';
     
     const handleClick = (e: MouseEvent) => {
@@ -60,7 +61,7 @@ export function TestPathLink({ path, status, message, showActions = true, varian
         openTestOutputModal(path, status || 'UNKNOWN', message);
     };
     
-    const handleGitHubClick = (e: MouseEvent) => {
+    const handleExternalLinkClick = (e: MouseEvent) => {
         e.stopPropagation();
         // Let the link work normally
     };
@@ -86,12 +87,12 @@ export function TestPathLink({ path, status, message, showActions = true, varian
                         </button>
                     )}
                     <a 
-                        href={githubUrl}
+                        href={externalTestUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         class="action-btn github-btn"
-                        onClick={handleGitHubClick}
-                        title="View on GitHub"
+                        onClick={handleExternalLinkClick}
+                        title="Open test file"
                     >
                         <ExternalLink size={isSmall ? 12 : 14} />
                     </a>

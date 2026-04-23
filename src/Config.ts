@@ -26,6 +26,7 @@ export interface AppConfig {
     defaultSource: string;
     sources: Record<string, DataSourceConfig>;
     defaultProfile: string;
+    testFileBaseUrl: string;
 }
 
 export interface Capabilities {
@@ -61,6 +62,10 @@ export interface ProviderOptions {
 // Get saved local URL from localStorage
 function getSavedLocalUrl(): string {
     return localStorage.getItem('localServerUrl') || 'http://localhost:1215';
+}
+
+function getSavedTestFileBaseUrl(): string {
+    return localStorage.getItem('testFileBaseUrl') || 'github';
 }
 
 // Get saved provider options from localStorage
@@ -114,6 +119,7 @@ function getDefaultConfig(): AppConfig {
         defaultSource: 'github',
         sources: buildSourceConfigsFromRegistry(),
         defaultProfile: localStorage.getItem('defaultProfile') || 'fast',
+        testFileBaseUrl: getSavedTestFileBaseUrl(),
     };
 }
 
@@ -167,6 +173,7 @@ export const activeSource = computed(() => {
  */
 export async function loadConfig(url?: string): Promise<AppConfig> {
     const savedDefaultProfile = localStorage.getItem('defaultProfile') || '';
+    const savedTestFileBaseUrl = localStorage.getItem('testFileBaseUrl') || '';
 
     try {
         const response = await fetch(url ?? './config.json');
@@ -198,6 +205,7 @@ export async function loadConfig(url?: string): Promise<AppConfig> {
             defaultSource: fileConfig.defaultSource || 'github',
             sources,
             defaultProfile: savedDefaultProfile || fileConfig.defaultProfile || 'fast',
+            testFileBaseUrl: savedTestFileBaseUrl || fileConfig.testFileBaseUrl || 'github',
         };
 
         appConfig.value = config;
@@ -213,6 +221,30 @@ export async function loadConfig(url?: string): Promise<AppConfig> {
         // Keep using default config from registry
         return appConfig.value;
     }
+}
+
+function joinUrl(baseUrl: string, path: string): string {
+    const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+    return new URL(path, normalizedBase).toString();
+}
+
+export function getTestFileBaseUrl(): string {
+    const configured = appConfig.value.testFileBaseUrl || 'github';
+
+    if (configured === 'github') {
+        return 'https://github.com/tc39/test262/blob/main/test/';
+    }
+
+    if (configured === 'local') {
+        const localBaseUrl = appConfig.value.sources.local?.baseUrl || getSavedLocalUrl();
+        return joinUrl(localBaseUrl, 'test262/test/');
+    }
+
+    return configured;
+}
+
+export function getTestFileUrl(path: string): string {
+    return joinUrl(getTestFileBaseUrl(), path);
 }
 
 // Switch to a different data source

@@ -1,5 +1,6 @@
 {
     "defaultSource": "github",
+    "testFileBaseUrl": "github",
     "defaultProfile": "fast",
     "sources": {
         "github": {
