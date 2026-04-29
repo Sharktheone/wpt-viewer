@@ -39,6 +39,7 @@ export function App() {
     });
 
     const statusFilters: FilterMap = createSignalStatusMap();
+    const activeStatuses = useComputed(() => unwrapSignalStatusMap(statusFilters));
     const search = useSignal('');
     const tree = useSignal<Tree|null>(null);
     const lazyLoadVersion = useSignal(0);
@@ -89,6 +90,7 @@ export function App() {
         return <TestList
             tree={entryOrEntryTree as Signal<EntryTree>}
             path={globalPath}
+            activeStatuses={activeStatuses}
         />
     });
 

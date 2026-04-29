@@ -1,14 +1,15 @@
 import '#/Style/components/TestList/DirectoryRow.scss';
 
-import { type EntryTree, TreeMetaSubtest } from '#/Wpt/Tree';
+import { type EntryTree, TreeMeta, TreeMetaSubtest } from '#/Wpt/Tree';
 import { Folder } from 'lucide-preact';
 import type { RowAttributes } from './Component';
 import { TestCompletion } from './TestCompletion';
 import { useComputed } from '@preact/signals';
 import { TestNum } from "#/Components/TestList/TestNum.tsx"
 import { settings } from "#/State.tsx"
+import { InlineStatusCounter } from '#/Components/InlineStatusCounter'
 
-export function DirectoryRow({ name, object, path }: RowAttributes) {
+export function DirectoryRow({ name, object, path, activeStatuses }: RowAttributes) {
     const subtree = object as EntryTree;
     const href = useComputed(() => `#/v/${path.value.join('/')}/${name}`);
 
@@ -28,6 +29,14 @@ export function DirectoryRow({ name, object, path }: RowAttributes) {
                 {name}
             </a>
         </td>
+
+        {activeStatuses.value.length > 0 &&
+            <td class="status-count">
+                {activeStatuses.value.map(status =>
+                    <InlineStatusCounter key={status} status={status} count={subtree[TreeMeta][status]} />
+                )}
+            </td>
+        }
 
         <td>
             <TestCompletion passed={passed} total={total} />

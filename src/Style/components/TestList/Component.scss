@@ -100,7 +100,8 @@
         th.total,
         th.failing,
         th.passing,
-        th.ratio {
+        th.ratio,
+        th.status-count {
             width: 0;
             text-align: end;
         }

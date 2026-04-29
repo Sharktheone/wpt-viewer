@@ -7,7 +7,7 @@ import {TestRow} from './TestRow'
 import {DirectoryRow} from './DirectoryRow'
 import {ParentDirectoryRow} from './ParentDirectoryRow'
 import {InlineStatusCounter} from '../InlineStatusCounter'
-import {PossibleSingleTestStatuses} from '#/Wpt/Status'
+import {PossibleSingleTestStatuses, type ShortStatusType} from '#/Wpt/Status'
 import {ChevronDown, ChevronUp, TestTube2, RefreshCw} from 'lucide-preact'
 import {formatNumber} from '#/Utils/Number'
 import {ratioToColorClass} from '../Ui/utils'
@@ -29,6 +29,7 @@ interface SortParams {
 interface TestListAttributes {
     tree: Signal<EntryTree>;
     path: Signal<string[]>;
+    activeStatuses: Signal<ShortStatusType[]>;
 }
 
 interface EntryContext extends SortParams {
@@ -41,6 +42,7 @@ export interface RowAttributes {
     name: string;
     path: Signal<string[]>;
     object: PartialEntry | EntryTree;
+    activeStatuses: Signal<ShortStatusType[]>;
 }
 
 function FooterStats({tree, path}: { tree: Signal<EntryTree>, path: Signal<string[]> }) {
@@ -198,7 +200,7 @@ const sort: SortParams = {
     direction: signal(1),
 }
 
-export function TestList({path, tree}: TestListAttributes) {
+export function TestList({path, tree, activeStatuses}: TestListAttributes) {
     const elements = useComputed(() =>
         tree.value &&
         !(tree.value instanceof PartialEntry) &&
@@ -212,6 +214,7 @@ export function TestList({path, tree}: TestListAttributes) {
                     name={key}
                     path={path}
                     object={value}
+                    activeStatuses={activeStatuses}
                 />
             })
     )
@@ -227,6 +230,12 @@ export function TestList({path, tree}: TestListAttributes) {
                 Name
             </SortableColumn>
 
+
+            {activeStatuses.value.length > 0 &&
+                <th class="status-count with-tooltip" data-title="Tests with selected status in this directory">
+                    Status
+                </th>
+            }
 
             <SortableColumn class="ratio" sort={sort} column="ratio">
                 %
@@ -249,7 +258,7 @@ export function TestList({path, tree}: TestListAttributes) {
 
         <tfoot>
         <tr>
-            <th colSpan={settings.showTests.peek() ? 3 : 2}>
+            <th colSpan={(settings.showTests.peek() ? 3 : 2) + (activeStatuses.value.length > 0 ? 1 : 0)}>
                 <FooterStats tree={tree} path={path}/>
             </th>
         </tr>

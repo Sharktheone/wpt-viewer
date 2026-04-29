@@ -30,4 +30,13 @@
         align-items: center;
         gap: 0.5rem;
     }
+
+    td.status-count {
+        white-space: nowrap;
+        text-align: end;
+
+        > * {
+            display: inline-flex;
+        }
+    }
 }
