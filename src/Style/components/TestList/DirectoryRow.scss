@@ -34,9 +34,17 @@
     td.status-count {
         white-space: nowrap;
         text-align: end;
+        font-family: monospace;
+        font-size: 12px;
 
-        > * {
-            display: inline-flex;
+        .InlineStatusCounter {
+            padding: 0;
+            line-height: 1;
+
+            svg {
+                width: 12px;
+                height: 12px;
+            }
         }
     }
 }
